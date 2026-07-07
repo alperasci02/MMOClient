@@ -6,6 +6,7 @@
 //   SPACE            -> en yakın mob'a saldır
 // Görsel: oyuncular kapsül (yeşil=sen, kırmızı=diğerleri), mob'lar mor küp (vurdukça küçülür).
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.WebSockets;
@@ -13,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Networking;
 
 namespace MMO
 {
@@ -24,6 +26,10 @@ namespace MMO
         public string url = "ws://localhost:8080/ws";
         [Tooltip("Saniyede kaç hareket niyeti gönderilsin")]
         public float sendRate = 15f;
+        [Tooltip("Bağlanamazsa en fazla kaç kez tekrar denensin (0 = sonsuz) — Faz 1 (Foundation)")]
+        public int maxConnectRetries = 0;
+        [Tooltip("Yeniden deneme aralığı üst sınırı (saniye) — üstel artar, bu tavana kadar")]
+        public float maxRetryDelaySec = 8f;
 
         const float MobMaxHp = 50f;
         const float AttackReach = 2.7f; // toplama/mezar yakın menzili (sunucu 3.0)
@@ -243,41 +249,131 @@ namespace MMO
         bool gatherRequested = false;
         float attackCooldown = 0f;
 
-        async void Start()
+        // Faz 1 (Foundation): isim ekranı + bağlantı durumu + kalıcılık modu uyarısı + pause
+        bool nameScreenActive = true;
+        string nameInput = "Kahraman";
+        bool isConnected = false;
+        string connectionStatus = "";
+        bool dbModeChecked = false;
+        bool dbPersistent = true; // henüz kontrol edilmediyse iyimser varsay (yanlış alarm olmasın)
+        bool paused = false;
+        int prevMyHp = -1;        // -1 = henüz görülmedi (ilk snapshot'ta yanlış "yeniden doğdun" göstermesin)
+        string respawnMsg = "";
+        float respawnMsgTimer = 0f;
+
+        void Start()
         {
             SetupScene();
             cts = new CancellationTokenSource();
-            ws = new ClientWebSocket();
-            try
+            nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
+            // Bağlantı, isim ekranında oyuncu "Oyna"ya basınca başlar (bkz. StartConnecting).
+        }
+
+        // İsim ekranından çağrılır: kalıcılık-modu kontrolünü ve bağlantı döngüsünü başlatır.
+        void StartConnecting()
+        {
+            nameScreenActive = false;
+            string trimmed = nameInput == null ? "" : nameInput.Trim();
+            playerName = trimmed.Length == 0 ? "Kahraman" : trimmed;
+            StartCoroutine(CheckPersistenceMode());
+            _ = ConnectLoop();
+        }
+
+        // Faz 1 (Foundation): bağlanamazsa üstel gecikmeyle tekrar dener — SADECE başlangıçta.
+        // Oyun-içi bağlantı kopması sonrası otomatik yeniden bağlanma Faz 2 kapsamındadır
+        // (bkz. Docs/PRODUCTION_TIMELINE.md, Docs/REPOSITORY_AUDIT.md A-10).
+        async Task ConnectLoop()
+        {
+            float delay = 1f;
+            int attempt = 0;
+            while (!cts.IsCancellationRequested)
             {
-                await ws.ConnectAsync(new Uri(url), cts.Token);
-                Debug.Log("[NetClient] bağlandı: " + url + " olarak '" + playerName + "'");
-                outbound.Enqueue(Protocol.EncodeJoin(playerName));
-                _ = ReceiveLoop();
-                _ = SendLoop();
+                attempt++;
+                connectionStatus = attempt == 1 ? "Sunucuya bağlanılıyor..." : ("Yeniden deneniyor... (" + attempt + ". deneme)");
+                ws = new ClientWebSocket();
+                try
+                {
+                    await ws.ConnectAsync(new Uri(url), cts.Token);
+                    Debug.Log("[NetClient] bağlandı: " + url + " olarak '" + playerName + "'");
+                    isConnected = true;
+                    connectionStatus = "";
+                    outbound.Enqueue(Protocol.EncodeJoin(playerName));
+                    _ = ReceiveLoop();
+                    _ = SendLoop();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (cts.IsCancellationRequested) return;
+                    Debug.LogWarning("[NetClient] bağlanılamadı (" + attempt + ". deneme): " + e.Message);
+                    if (maxConnectRetries > 0 && attempt >= maxConnectRetries)
+                    {
+                        connectionStatus = "Sunucuya bağlanılamadı (" + attempt + " deneme). Sunucuyu başlat (scripts\\start-game.ps1) ve sahneyi yeniden oynat.";
+                        Debug.LogError("[NetClient] " + connectionStatus);
+                        return;
+                    }
+                    connectionStatus = "Sunucu bulunamadı — " + Mathf.CeilToInt(delay) + " sn sonra tekrar denenecek. (Sunucu açık mı? scripts\\start-game.ps1)";
+                    try { await Task.Delay(TimeSpan.FromSeconds(delay), cts.Token); }
+                    catch { return; }
+                    delay = Mathf.Min(delay * 2f, maxRetryDelaySec);
+                }
             }
-            catch (Exception e)
+        }
+
+        // Faz 1 (Foundation): sunucunun /healthz'inden kalıcılık modunu (DB var mı) okur (A-05).
+        // Tel protokolüne dokunmaz — ayrı, tek seferlik bir HTTP isteğidir.
+        IEnumerator CheckPersistenceMode()
+        {
+            string healthUrl = ToHealthzUrl(url);
+            if (healthUrl == null) yield break;
+            using (var req = UnityWebRequest.Get(healthUrl))
             {
-                Debug.LogError("[NetClient] bağlanılamadı: " + e.Message +
-                    "  -> Sunucu açık mı? (server klasöründe: go run ./cmd/gameserver)");
+                req.timeout = 3;
+                yield return req.SendWebRequest();
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    dbPersistent = req.downloadHandler.text.Contains("\"db\":true");
+                    dbModeChecked = true;
+                }
             }
+        }
+
+        static string ToHealthzUrl(string wsUrl)
+        {
+            if (string.IsNullOrEmpty(wsUrl)) return null;
+            string h = wsUrl.Replace("wss://", "https://").Replace("ws://", "http://");
+            int idx = h.IndexOf("/ws", StringComparison.Ordinal);
+            if (idx >= 0) h = h.Substring(0, idx);
+            return h.TrimEnd('/') + "/healthz";
         }
 
         async Task ReceiveLoop()
         {
             var buf = new byte[64 * 1024];
-            while (ws.State == WebSocketState.Open && !cts.IsCancellationRequested)
+            try
             {
-                using (var mem = new System.IO.MemoryStream())
+                while (ws.State == WebSocketState.Open && !cts.IsCancellationRequested)
                 {
-                    WebSocketReceiveResult res;
-                    do
+                    using (var mem = new System.IO.MemoryStream())
                     {
-                        res = await ws.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token);
-                        if (res.MessageType == WebSocketMessageType.Close) return;
-                        mem.Write(buf, 0, res.Count);
-                    } while (!res.EndOfMessage);
-                    inbound.Enqueue(mem.ToArray());
+                        WebSocketReceiveResult res;
+                        do
+                        {
+                            res = await ws.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token);
+                            if (res.MessageType == WebSocketMessageType.Close) return;
+                            mem.Write(buf, 0, res.Count);
+                        } while (!res.EndOfMessage);
+                        inbound.Enqueue(mem.ToArray());
+                    }
+                }
+            }
+            finally
+            {
+                if (!cts.IsCancellationRequested)
+                {
+                    isConnected = false;
+                    connectionStatus = "Bağlantı koptu. (Otomatik yeniden bağlanma Faz 2'de eklenecek — şimdilik sahneyi yeniden başlat.)";
+                    Debug.LogWarning("[NetClient] " + connectionStatus);
                 }
             }
         }
@@ -295,6 +391,9 @@ namespace MMO
 
         void Update()
         {
+            // İsim ekranındayken (henüz "Oyna"ya basılmadıysa) oyun mantığı çalışmaz.
+            if (nameScreenActive) return;
+
             // 1) gelen mesajlar
             while (inbound.TryDequeue(out var msg))
             {
@@ -457,6 +556,7 @@ namespace MMO
             if (repairMsgTimer > 0f) repairMsgTimer -= Time.deltaTime;
             if (deathMsgTimer > 0f) deathMsgTimer -= Time.deltaTime;
             if (noticeTimer > 0f) noticeTimer -= Time.deltaTime;
+            if (respawnMsgTimer > 0f) respawnMsgTimer -= Time.deltaTime;
 
             // yüzen hasar yazıları yüksel + söndür
             for (int i = floaters.Count - 1; i >= 0; i--)
@@ -485,6 +585,21 @@ namespace MMO
             if (pendingInviteTimer > 0f) pendingInviteTimer -= Time.deltaTime;
             if (partyMsgTimer > 0f) partyMsgTimer -= Time.deltaTime;
             if (attackCooldown > 0f) attackCooldown -= Time.deltaTime;
+
+            // Faz 1 (Foundation): ESC -> açık panel varsa onu kapat, yoksa duraklat/devam et.
+            var kbEsc = Keyboard.current;
+            if (kbEsc != null && kbEsc.escapeKey.wasPressedThisFrame)
+            {
+                if (showInventory || showCrafting || showCharSheet || showMarket || showGuild || showProf || showQuests || showLeader)
+                    showInventory = showCrafting = showCharSheet = showMarket = showGuild = showProf = showQuests = showLeader = false;
+                else
+                    paused = !paused;
+            }
+            if (paused)
+            {
+                if (ws != null && ws.State == WebSocketState.Open) outbound.Enqueue(Protocol.EncodeMove(0, 0));
+                return;
+            }
 
             if (ws == null || ws.State != WebSocketState.Open) return;
             var kb = Keyboard.current;
@@ -893,7 +1008,17 @@ namespace MMO
                 bool isPortal = e.Kind == Protocol.KindPortal;
                 bool isCorpse = e.Kind == Protocol.KindCorpse;
                 bool isNew = false;
-                if (e.Id == myId) myHp = e.Hp;
+                if (e.Id == myId)
+                {
+                    // Faz 1 (Foundation): ölüp (hp<=0) yeniden hp>0 olma geçişini tespit et -> kısa mesaj.
+                    if (prevMyHp != -1 && prevMyHp <= 0 && e.Hp > 0)
+                    {
+                        respawnMsg = "Yeniden doğdun.";
+                        respawnMsgTimer = 2.5f;
+                    }
+                    prevMyHp = e.Hp;
+                    myHp = e.Hp;
+                }
                 if (!cubes.TryGetValue(e.Id, out var go))
                 {
                     isNew = true;
@@ -1082,6 +1207,22 @@ namespace MMO
 
         void OnGUI()
         {
+            // Faz 1 (Foundation): isim ekranı / bağlanma ekranı — geri kalan HUD henüz çizilmez.
+            if (nameScreenActive) { DrawNameScreen(); return; }
+            if (!isConnected) { DrawConnectingScreen(); return; }
+
+            // A-05: sunucu bellek modundaysa (DB'siz) ilerleme kaydedilmediğini belirgin göster.
+            if (dbModeChecked && !dbPersistent)
+            {
+                var warn = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
+                warn.normal.textColor = new Color(1f, 0.3f, 0.3f);
+                var wprev = GUI.color;
+                GUI.color = new Color(0.3f, 0f, 0f, 0.55f);
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, 22), Texture2D.whiteTexture);
+                GUI.color = wprev;
+                GUI.Label(new Rect(0, 2, Screen.width, 20), "⚠ BELLEK MODU — ilerleme KAYDEDİLMİYOR (sunucu DB'ye bağlı değil)", warn);
+            }
+
             int lowHp = Mathf.RoundToInt(myMaxHp * 0.3f);
             // az canlıyken kırmızı ekran uyarısı
             if (myHp > 0 && myHp < lowHp)
@@ -1163,6 +1304,12 @@ namespace MMO
                 var dp = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
                 dp.normal.textColor = new Color(1f, 0.25f, 0.25f, Mathf.Clamp01(deathMsgTimer));
                 GUI.Label(new Rect(0, Screen.height * 0.42f, Screen.width, 50), deathMsg, dp);
+            }
+            else if (respawnMsgTimer > 0f)
+            {
+                var rsp = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                rsp.normal.textColor = new Color(0.4f, 1f, 0.5f, Mathf.Clamp01(respawnMsgTimer));
+                GUI.Label(new Rect(0, Screen.height * 0.42f, Screen.width, 50), respawnMsg, rsp);
             }
 
             if (noticeTimer > 0f)
@@ -1571,7 +1718,81 @@ namespace MMO
             var help = new GUIStyle(GUI.skin.label) { fontSize = 13 };
             help.normal.textColor = Color.white;
             GUI.Label(new Rect(15, 148, 1300, 30),
-                "Sol tık: yürü/saldır/topla | WASD | SPACE | 1/2/3 | I çanta | C üretim | K karakter | M pazar | G lonca | J meslek | Q görev | T sıralama | Enter sohbet | R tamir | P/Y/L parti", help);
+                "Sol tık: yürü/saldır/topla | WASD | SPACE | 1/2/3 | I çanta | C üretim | K karakter | M pazar | G lonca | J meslek | Q görev | T sıralama | Enter sohbet | R tamir | P/Y/L parti | ESC duraklat", help);
+
+            if (paused) DrawPauseMenu();
+        }
+
+        // Faz 1 (Foundation): ilk-oynanış isim ekranı — bağlantı Inspector'dan değil buradan başlar.
+        void DrawNameScreen()
+        {
+            float w = 420, h = 190;
+            float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
+            GUI.color = new Color(0f, 0f, 0f, 0.85f);
+            GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            var title = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            title.normal.textColor = new Color(1f, 0.85f, 0.3f);
+            GUI.Label(new Rect(x, y + 16, w, 36), "PROJECT ANATOLIA", title);
+
+            var lbl = new GUIStyle(GUI.skin.label) { fontSize = 15 };
+            lbl.normal.textColor = Color.white;
+            GUI.Label(new Rect(x + 24, y + 70, 90, 28), "İsim:", lbl);
+
+            GUI.SetNextControlName("nameField");
+            var nf = new GUIStyle(GUI.skin.textField) { fontSize = 16 };
+            nameInput = GUI.TextField(new Rect(x + 100, y + 68, w - 140, 30), nameInput, 24, nf);
+            GUI.FocusControl("nameField");
+
+            var hint = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            hint.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
+            GUI.Label(new Rect(x + 24, y + 104, w - 48, 20), "Aynı isimle girersen karakterin/altının kalıcı kalır.", hint);
+
+            var btn = new GUIStyle(GUI.skin.button) { fontSize = 17, fontStyle = FontStyle.Bold };
+            bool enterPressed = Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame;
+            if (GUI.Button(new Rect(x + w / 2f - 70, y + 138, 140, 36), "Oyna", btn) || enterPressed)
+                StartConnecting();
+        }
+
+        // Faz 1 (Foundation): "Oyna"dan sonra, WS bağlantısı kurulana kadar (retry dahil) gösterilir.
+        void DrawConnectingScreen()
+        {
+            var st = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            st.normal.textColor = Color.white;
+            GUI.Label(new Rect(0, Screen.height / 2f - 20, Screen.width, 40),
+                string.IsNullOrEmpty(connectionStatus) ? "Bağlanılıyor..." : connectionStatus, st);
+        }
+
+        // Faz 1 (Foundation): ESC ile aç/kapa — devam et / çıkış.
+        void DrawPauseMenu()
+        {
+            var prev = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.6f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = prev;
+
+            float w = 260, h = 140;
+            float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
+            GUI.color = new Color(0.05f, 0.05f, 0.08f, 0.95f);
+            GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            var title = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            title.normal.textColor = Color.white;
+            GUI.Label(new Rect(x, y + 12, w, 30), "DURAKLATILDI", title);
+
+            var btn = new GUIStyle(GUI.skin.button) { fontSize = 15 };
+            if (GUI.Button(new Rect(x + 30, y + 55, w - 60, 32), "Devam Et", btn))
+                paused = false;
+            if (GUI.Button(new Rect(x + 30, y + 95, w - 60, 32), "Çıkış", btn))
+            {
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+            }
         }
 
         // Faz A: Karakter Sayfası — 6 attribute + harcanmamış puan (+ ile dağıt) + derived stats.
