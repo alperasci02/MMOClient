@@ -261,9 +261,48 @@ namespace MMO
         string respawnMsg = "";
         float respawnMsgTimer = 0f;
 
+        // Faz 1 (Foundation) gün 6-7: ses paketi #1 (Kenney, CC0 — bkz. Assets/Resources/Audio/CREDITS.txt)
+        AudioSource sfx;
+        AudioClip[] footstepClips;
+        AudioClip[] hitClips;
+        AudioClip deathClip, lootClip, levelUpClip, uiClickClip;
+        float footstepTimer = 0f;
+
+        void LoadAudio()
+        {
+            sfx = gameObject.AddComponent<AudioSource>();
+            sfx.playOnAwake = false;
+            sfx.spatialBlend = 0f; // 2D — basit yerel his (ilk ses geçişi; 3D pan/mesafe sonraki cila)
+            footstepClips = LoadClips("Audio/footstep_grass_00", "Audio/footstep_grass_01",
+                "Audio/footstep_grass_02", "Audio/footstep_grass_03", "Audio/footstep_grass_04");
+            hitClips = LoadClips("Audio/hit_00", "Audio/hit_01", "Audio/hit_02");
+            deathClip = Resources.Load<AudioClip>("Audio/death");
+            lootClip = Resources.Load<AudioClip>("Audio/loot");
+            levelUpClip = Resources.Load<AudioClip>("Audio/levelup");
+            uiClickClip = Resources.Load<AudioClip>("Audio/ui_click");
+        }
+
+        static AudioClip[] LoadClips(params string[] paths)
+        {
+            var list = new List<AudioClip>();
+            foreach (var p in paths) { var c = Resources.Load<AudioClip>(p); if (c != null) list.Add(c); }
+            return list.ToArray();
+        }
+
+        void PlaySfx(AudioClip clip, float vol = 1f)
+        {
+            if (clip != null && sfx != null) sfx.PlayOneShot(clip, vol);
+        }
+
+        void PlayRandomSfx(AudioClip[] clips, float vol = 1f)
+        {
+            if (clips != null && clips.Length > 0) PlaySfx(clips[UnityEngine.Random.Range(0, clips.Length)], vol);
+        }
+
         void Start()
         {
             SetupScene();
+            LoadAudio();
             cts = new CancellationTokenSource();
             nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
             // Bağlantı, isim ekranında oyuncu "Oyna"ya basınca başlar (bkz. StartConnecting).
@@ -414,12 +453,13 @@ namespace MMO
                     {
                         lastReward = amt;
                         rewardPopupTimer = 1.5f;
+                        PlaySfx(lootClip, 0.6f);
                         Debug.Log($"[NetClient] +{amt} altın! (toplam {myGold})");
                     }
                 }
                 else if (Protocol.TryDecodeStats(msg, out var lvl, out var xp, out var xpNext, out var maxHp, out var dmg))
                 {
-                    if (lvl > myLevel) Debug.Log($"[NetClient] SEVİYE ATLADIN -> {lvl}!");
+                    if (lvl > myLevel) { Debug.Log($"[NetClient] SEVİYE ATLADIN -> {lvl}!"); PlaySfx(levelUpClip); }
                     myLevel = lvl; myXp = xp; myXpNext = xpNext; myMaxHp = maxHp; myDamage = dmg;
                 }
                 else if (Protocol.TryDecodeEquipment(msg, out var wdef, out var adef))
@@ -454,6 +494,7 @@ namespace MMO
                     deathMsg = dangerous ? "ÖLDÜN!  Eşyaların düştü — mezarına dön!" : "Öldün.";
                     deathMsgTimer = 4f;
                     corpseTarget = 0; corpseRequested = false;
+                    PlaySfx(deathClip);
                     Debug.Log("[NetClient] " + deathMsg);
                 }
                 else if (Protocol.TryDecodePartyState(msg, out var pm))
@@ -545,6 +586,7 @@ namespace MMO
                 else if (Protocol.TryDecodeLoot(msg, out var ln, out var lr, out var lq))
                 {
                     lootName = ln; lootRarity = lr; lootQty = lq; lootPopupTimer = 2f;
+                    PlaySfx(lootClip, 0.6f);
                     Debug.Log($"[NetClient] loot: +{lq} {ln}");
                 }
             }
@@ -678,6 +720,13 @@ namespace MMO
                 var to = moveTarget.Value - me2;
                 if (to.magnitude > 0.3f) dir = to.normalized;
                 else moveTarget = null; // vardık
+            }
+
+            // Faz 1 (Foundation) gün 6-7: hareket ederken periyodik ayak sesi
+            if (dir.sqrMagnitude > 0.01f)
+            {
+                footstepTimer -= Time.deltaTime;
+                if (footstepTimer <= 0f) { PlayRandomSfx(footstepClips, 0.4f); footstepTimer = 0.38f; }
             }
 
             // 5) hedef mob menzildeyse otomatik saldır
@@ -1114,7 +1163,7 @@ namespace MMO
                     if (prevHp.TryGetValue(e.Id, out ph) && e.Hp != ph)
                     {
                         int delta = e.Hp - ph;
-                        if (delta < 0) { SpawnFloat(e.X, yOff + 1.4f, e.Y, "-" + (-delta), new Color(1f, 0.55f, 0.15f)); hitFlash[e.Id] = Time.time + 0.18f; }
+                        if (delta < 0) { SpawnFloat(e.X, yOff + 1.4f, e.Y, "-" + (-delta), new Color(1f, 0.55f, 0.15f)); hitFlash[e.Id] = Time.time + 0.18f; PlayRandomSfx(hitClips, 0.5f); }
                         else if (e.Id == myId) SpawnFloat(e.X, yOff + 1.4f, e.Y, "+" + delta, new Color(0.4f, 1f, 0.4f));
                     }
                     prevHp[e.Id] = e.Hp;
@@ -1752,7 +1801,10 @@ namespace MMO
             var btn = new GUIStyle(GUI.skin.button) { fontSize = 17, fontStyle = FontStyle.Bold };
             bool enterPressed = Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame;
             if (GUI.Button(new Rect(x + w / 2f - 70, y + 138, 140, 36), "Oyna", btn) || enterPressed)
+            {
+                PlaySfx(uiClickClip);
                 StartConnecting();
+            }
         }
 
         // Faz 1 (Foundation): "Oyna"dan sonra, WS bağlantısı kurulana kadar (retry dahil) gösterilir.
@@ -1784,9 +1836,13 @@ namespace MMO
 
             var btn = new GUIStyle(GUI.skin.button) { fontSize = 15 };
             if (GUI.Button(new Rect(x + 30, y + 55, w - 60, 32), "Devam Et", btn))
+            {
+                PlaySfx(uiClickClip);
                 paused = false;
+            }
             if (GUI.Button(new Rect(x + 30, y + 95, w - 60, 32), "Çıkış", btn))
             {
+                PlaySfx(uiClickClip);
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
 #else

@@ -1,0 +1,15 @@
+Ses kaynağı: Kenney.nl (CC0 — kamu malı, atıf gerekmez, ticari kullanım serbest)
+İndirilen paketler (2026-07-08, Faz 1 gün 6-7):
+  - RPG Audio        https://kenney.nl/assets/rpg-audio        -> loot.ogg (handleCoins.ogg)
+  - Impact Sounds    https://kenney.nl/assets/impact-sounds    -> footstep_grass_0X.ogg, hit_0X.ogg (impactPunch_medium)
+  - Music Jingles    https://kenney.nl/assets/music-jingles    -> death.ogg (Hit jingles/jingles_HIT00), levelup.ogg (8-Bit jingles/jingles_NES00)
+  - UI Audio         https://kenney.nl/assets/ui-audio         -> ui_click.ogg (click1.ogg)
+
+Lisans: Creative Commons CC0 1.0 (bkz. her paketin kendi License.txt'i, aynı içerik).
+Atıf zorunlu değil ama nezaketen: kenney.nl / @KenneyNL
+
+NOT (Docs/PRODUCTION_TIMELINE.md Faz 1 gün 6-7): bölge başına ortam (ambient) sesi
+BİLİNÇLİ OLARAK ERTELENDİ — Kenney kataloğunda uygun bir CC0 uzun-form doğa/ortam
+loop paketi bulunamadı (Kenney ağırlıklı kısa SFX + jingle üretiyor). Farklı bir
+kaynaktan lisansı belirsiz dosya eklemek yerine bu boşluk açıkça bırakıldı; bkz.
+Docs/REPOSITORY_AUDIT.md A-14.
