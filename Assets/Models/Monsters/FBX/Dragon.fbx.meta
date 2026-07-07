@@ -1,0 +1,635 @@
+fileFormatVersion: 2
+guid: a7a49e67caac4f34393a66a4939f6fde
+ModelImporter:
+  serializedVersion: 24501
+  internalIDToNameTable: []
+  externalObjects: {}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: "\nClip 'DragonArmature|Dragon_Attack' has import animation
+      warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Body' has translation animation
+      that will be discarded.\n\t'Face' is inbetween humanoid transforms and has
+      rotation animation that will be discarded.\n\t'Wing2.L' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\t'UpperLeg.L'
+      has translation animation that will be discarded.\n\t'UpperLeg.R' has translation
+      animation that will be discarded.\n\nClip 'DragonArmature|Dragon_Attack2' has
+      import animation warnings that might lower retargeting quality:\nNote: Activate
+      translation DOF on avatar to improve retargeting quality.\n\t'Body' has translation
+      animation that will be discarded.\n\t'Face' is inbetween humanoid transforms
+      and has rotation animation that will be discarded.\n\t'Wing2.L' is inbetween
+      humanoid transforms and has rotation animation that will be discarded.\n\t'UpperLeg.L'
+      has translation animation that will be discarded.\n\t'UpperLeg.R' has translation
+      animation that will be discarded.\n\nClip 'DragonArmature|Dragon_Death' has
+      import animation warnings that might lower retargeting quality:\nNote: Activate
+      translation DOF on avatar to improve retargeting quality.\n\t'Body' has translation
+      animation that will be discarded.\n\t'Face' is inbetween humanoid transforms
+      and has rotation animation that will be discarded.\n\t'Wing2.L' is inbetween
+      humanoid transforms and has rotation animation that will be discarded.\n\nClip
+      'DragonArmature|Dragon_Flying' has import animation warnings that might lower
+      retargeting quality:\nNote: Activate translation DOF on avatar to improve retargeting
+      quality.\n\t'Face' is inbetween humanoid transforms and has rotation animation
+      that will be discarded.\n\t'Wing2.L' is inbetween humanoid transforms and has
+      rotation animation that will be discarded.\n\nClip 'DragonArmature|Dragon_Hit'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Body'
+      has translation animation that will be discarded.\n\t'Face' is inbetween humanoid
+      transforms and has rotation animation that will be discarded.\n\t'Wing2.L'
+      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'UpperLeg.L'
+      has translation animation that will be discarded.\n\t'UpperLeg.R' has translation
+      animation that will be discarded.\n"
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: DragonArmature|Dragon_Attack
+      takeName: DragonArmature|Dragon_Attack
+      internalID: -8721722018038115971
+      firstFrame: 0
+      lastFrame: 21
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: DragonArmature|Dragon_Attack2
+      takeName: DragonArmature|Dragon_Attack2
+      internalID: 6841991216987856006
+      firstFrame: 0
+      lastFrame: 40
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: DragonArmature|Dragon_Death
+      takeName: DragonArmature|Dragon_Death
+      internalID: 1396291781994451658
+      firstFrame: 0
+      lastFrame: 29
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: DragonArmature|Dragon_Flying
+      takeName: DragonArmature|Dragon_Flying
+      internalID: 6715004902463417496
+      firstFrame: 0
+      lastFrame: 40
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: DragonArmature|Dragon_Hit
+      takeName: DragonArmature|Dragon_Hit
+      internalID: -3693655769034393273
+      firstFrame: 0
+      lastFrame: 40
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: BodyRoot
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: UpperLeg.L
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: UpperLeg.R
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LowerLeg.L
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LowerLeg.R
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Feet.L
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Feet.R
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Body
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Shoulder.L
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Shoulder.R
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing1.L
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing1.R
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing3.L
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing2.R
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing4.L
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Wing3.R
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Nose
+      humanName: LeftEye
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Eyes
+      humanName: RightEye
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: Dragon(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: DragonArmature
+      parentName: Dragon(Clone)
+      position: {x: -0, y: 0, z: -2.3283064e-10}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: Root
+      parentName: DragonArmature
+      position: {x: 1.7111163e-18, y: -0.000035651476, z: -0.0003498999}
+      rotation: {x: 0.7096294, y: -2.6378304e-24, z: -4.3004773e-16, w: 0.7045752}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: BodyRoot
+      parentName: Root
+      position: {x: 0.00012277513, y: 0.0069518015, z: 0.000106868814}
+      rotation: {x: -0.003573887, y: 3.0408954e-16, z: 3.040894e-16, w: 0.9999936}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Body
+      parentName: BodyRoot
+      position: {x: 3.412578e-18, y: 0.0031109666, z: -0.0011580907}
+      rotation: {x: 0.245612, y: 0.00000011555772, z: 0.000000029279235, w: 0.9693683}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Neck
+      parentName: Body
+      position: {x: 4.0640326e-18, y: 0.01103322, z: -2.9802322e-10}
+      rotation: {x: -0.00682527, y: 2.3091687e-14, z: -0.0000000016272749, w: 0.9999767}
+      scale: {x: 1, y: 0.99999994, z: 1.0000001}
+    - name: Head
+      parentName: Neck
+      position: {x: 2.1895049e-18, y: 0.0028140421, z: 0}
+      rotation: {x: -0.0036992219, y: 0.9886171, z: 0.15040638, w: -0.00068697805}
+      scale: {x: 1, y: 0.9999998, z: 0.99999994}
+    - name: Face
+      parentName: Head
+      position: {x: -4.6566128e-12, y: 0.0037780271, z: -9.954146e-10}
+      rotation: {x: -0.42001957, y: -0.002614567, z: 0.0027063934, w: 0.90750724}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: Eyes
+      parentName: Face
+      position: {x: -0.000026849415, y: 0.0025870628, z: 0.002350409}
+      rotation: {x: 0.00000061200774, y: -0.070631556, z: 0.9975025, w: 0.000000087156124}
+      scale: {x: 1, y: 1.0000005, z: 1.0000002}
+    - name: Nose
+      parentName: Face
+      position: {x: -3.842331e-12, y: 0.0050323317, z: -7.7817275e-10}
+      rotation: {x: -0.026604883, y: 0.0000011694715, z: 0.0000000010391066, w: 0.99964607}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Nose_end
+      parentName: Nose
+      position: {x: -0, y: 0.0033506542, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Shoulder.L
+      parentName: Body
+      position: {x: -0.0025251252, y: 0.0043858285, z: -0.0008833951}
+      rotation: {x: -0.22784239, y: 0.17696258, z: 0.5735504, w: 0.766689}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: Wing1.L
+      parentName: Shoulder.L
+      position: {x: -2.6542693e-10, y: 0.004679087, z: -1.3969838e-11}
+      rotation: {x: -0.14290103, y: 0.52245057, z: 0.08692858, w: 0.836103}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Wing2.L
+      parentName: Wing1.L
+      position: {x: 0.0000000011920929, y: 0.004932166, z: -0.0000000012665987}
+      rotation: {x: 0.039415736, y: 0.080969736, z: 0.07007084, w: 0.9934689}
+      scale: {x: 1, y: 1, z: 0.99999994}
+    - name: Wing3.L
+      parentName: Wing2.L
+      position: {x: 2.9802322e-10, y: 0.006208577, z: -5.9604643e-10}
+      rotation: {x: -0.028227331, y: -0.3074604, z: -0.039505403, w: 0.9503213}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: Wing4.L
+      parentName: Wing3.L
+      position: {x: 0.0000000015646219, y: 0.0067519546, z: 0.0000000023841857}
+      rotation: {x: -0.06440934, y: -0.30203658, z: 0.05939401, w: 0.9492617}
+      scale: {x: 1, y: 0.99999994, z: 1.0000001}
+    - name: Wing4.L_end
+      parentName: Wing4.L
+      position: {x: -0, y: 0.008431542, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Shoulder.R
+      parentName: Body
+      position: {x: 0.0025637683, y: 0.0043858285, z: -0.0008833937}
+      rotation: {x: -0.20720002, y: -0.14945093, z: -0.58132637, w: 0.7725233}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: Wing1.R
+      parentName: Shoulder.R
+      position: {x: 2.6542693e-10, y: 0.0046790857, z: 0}
+      rotation: {x: -0.0038381065, y: 0.09467919, z: -0.14599697, w: 0.98473656}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: Wing2.R
+      parentName: Wing1.R
+      position: {x: 0.0000000013411044, y: 0.004932168, z: 5.9604643e-10}
+      rotation: {x: 0.053443424, y: 0.15979135, z: 0.03448234, w: 0.9850998}
+      scale: {x: 0.99999994, y: 1.0000001, z: 1}
+    - name: Wing3.R
+      parentName: Wing2.R
+      position: {x: -0.0000000020861626, y: 0.0062085795, z: 5.9604643e-10}
+      rotation: {x: -0.11132294, y: -0.3974507, z: -0.0180937, w: 0.91066617}
+      scale: {x: 1, y: 0.9999999, z: 0.99999994}
+    - name: Wing4.R
+      parentName: Wing3.R
+      position: {x: 0.0000000010430813, y: 0.0067519597, z: 0.0000000020861626}
+      rotation: {x: -0.09527537, y: -0.38397878, z: -0.058806688, w: 0.91652864}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: Wing4.R_end
+      parentName: Wing4.R
+      position: {x: -0, y: 0.008431541, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: UpperLeg.L
+      parentName: BodyRoot
+      position: {x: -0.0052367537, y: 0.0014686667, z: -0.00007700215}
+      rotation: {x: -0.0008655736, y: 0.042457838, z: 0.9981844, w: 0.04271544}
+      scale: {x: 1.0000008, y: 1.0000001, z: 1.0000008}
+    - name: LowerLeg.L
+      parentName: UpperLeg.L
+      position: {x: 1.3766112e-10, y: 0.0033883473, z: 1.2805686e-10}
+      rotation: {x: -0.12485632, y: -0.78330296, z: 0.23970284, w: 0.5598125}
+      scale: {x: 0.9999999, y: 0.9999998, z: 0.9999998}
+    - name: Feet.L
+      parentName: LowerLeg.L
+      position: {x: 5.9604643e-10, y: 0.004213951, z: 1.11758706e-10}
+      rotation: {x: -0.049406204, y: 0.1753745, z: -0.56455797, w: 0.8050324}
+      scale: {x: 0.9999999, y: 1, z: 0.99999994}
+    - name: Feet.L_end
+      parentName: Feet.L
+      position: {x: -0, y: 0.0056419247, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: UpperLeg.R
+      parentName: BodyRoot
+      position: {x: 0.0049912035, y: 0.0014686667, z: -0.00007700215}
+      rotation: {x: -0.003380115, y: 0.041850246, z: 0.9958748, w: -0.08043955}
+      scale: {x: 1.0000023, y: 1, z: 1.0000006}
+    - name: LowerLeg.R
+      parentName: UpperLeg.R
+      position: {x: -3.7643977e-10, y: 0.003420007, z: 4.6566128e-12}
+      rotation: {x: -0.22344323, y: -0.7380451, z: 0.16283253, w: 0.61550635}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: Feet.R
+      parentName: LowerLeg.R
+      position: {x: -5.2154064e-10, y: 0.004207316, z: 4.0978193e-10}
+      rotation: {x: -0.05837564, y: 0.117533475, z: -0.5647476, w: 0.81476283}
+      scale: {x: 1, y: 1, z: 0.99999994}
+    - name: Feet.R_end
+      parentName: Feet.R
+      position: {x: -0, y: 0.005643374, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Tail1
+      parentName: BodyRoot
+      position: {x: 0.000047926806, y: 0.003070376, z: -0.002854866}
+      rotation: {x: -0.48918578, y: -1.04810124e-22, z: 5.87856e-23, w: 0.8721796}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Tail2
+      parentName: Tail1
+      position: {x: -0, y: 0.0032151153, z: 2.9802322e-10}
+      rotation: {x: -0.4785356, y: -0.0000001046739, z: 0.000000057045895, w: 0.8780682}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Tail3
+      parentName: Tail2
+      position: {x: -5.1016967e-14, y: 0.005028787, z: -0.0000000012035195}
+      rotation: {x: -0.0000000069150095, y: 0.9983876, z: 0.05676492, w: -0.00000026713937}
+      scale: {x: 1, y: 0.99999994, z: 0.9999998}
+    - name: Tail4
+      parentName: Tail3
+      position: {x: -1.9825563e-12, y: 0.0066514877, z: -6.147098e-10}
+      rotation: {x: -0.16432896, y: 0.0000010449824, z: -0.00000020890361, w: 0.9864056}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Tail4_end
+      parentName: Tail4
+      position: {x: -0, y: 0.005194156, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Dragon
+      parentName: Dragon(Clone)
+      position: {x: -0, y: 1.5839573, z: -0.21915692}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

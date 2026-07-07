@@ -1,0 +1,27 @@
+GERÇEK 3D MODELLER (Asset entegrasyonu)
+=======================================
+Bu klasöre AŞAĞIDAKİ İSİMLERLE prefab koy -> oyun otomatik gerçek modelleri kullanır.
+Hiçbiri yoksa oyun küp/kapsül (primitive) ile çalışmaya devam eder (hiçbir şey bozulmaz).
+
+Beklenen prefab dosya adları (Assets/Resources/Entities/ içinde):
+  player.prefab   -> oyuncu karakteri (insansı)
+  enemy.prefab    -> normal düşman (goblin/kurt/haydut)
+  boss.prefab     -> boss (büyük canavar)  [opsiyonel; yoksa enemy büyütülür]
+  node.prefab     -> kaynak düğümü (maden/ağaç/ot/balık)
+  portal.prefab   -> portal (ışık sütunu/kapı)
+  corpse.prefab   -> mezar/yağma çantası
+
+ÖNEMLİ:
+- Modelin PIVOT'u AYAKTA olsun (model yere otursun). Değilse Unity'de boş bir parent'a
+  koyup child'ı yukarı kaydır.
+- Modelin ölçeği ~1.8-2 birim boy olacak şekilde ayarla (oyuncu kapsülü 2 birim).
+- Collider eklemeye gerek yok; kod otomatik CapsuleCollider ekler (tıklama için).
+
+NEREDEN BULURUM (ücretsiz):
+1. Unity Asset Store -> "low poly character" / "low poly monster" / "stylized" ara,
+   Fiyat: Free filtrele. (örn. "POLYGON Starter", "Low Poly Survival" demoları)
+2. Mixamo.com (Adobe, ücretsiz): insansı karakter + animasyon indir (FBX).
+3. Modeli projeye sürükle -> sahnede ayarla -> Assets/Resources/Entities/ içine
+   yukarıdaki isimle PREFAB olarak sürükle (prefab oluştur).
+
+Animasyon (yürüme/saldırı) sonraki adım; önce statik modeller bile küp'ten 100x iyi görünür.
