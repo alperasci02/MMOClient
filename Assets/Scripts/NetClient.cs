@@ -6,15 +6,9 @@
 //   SPACE            -> en yakın mob'a saldır
 // Görsel: oyuncular kapsül (yeşil=sen, kırmızı=diğerleri), mob'lar mor küp (vurdukça küçülür).
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.WebSockets;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Networking;
 
 namespace MMO
 {
@@ -35,10 +29,7 @@ namespace MMO
         const float AttackReach = 2.7f; // toplama/mezar yakın menzili (sunucu 3.0)
         float myReach = 2.7f;           // silaha göre saldırı menzili (yay/asa uzun) — Faz 23
 
-        ClientWebSocket ws;
-        CancellationTokenSource cts;
-        readonly ConcurrentQueue<byte[]> inbound = new ConcurrentQueue<byte[]>();
-        readonly ConcurrentQueue<byte[]> outbound = new ConcurrentQueue<byte[]>();
+        NetConnection net; // Faz 2 (İstemci sağlığı) gün 1: soket/retry/reconnect NetConnection.cs'e taşındı
 
         ulong myId = 0;
         readonly Dictionary<ulong, GameObject> cubes = new Dictionary<ulong, GameObject>();
@@ -249,13 +240,9 @@ namespace MMO
         bool gatherRequested = false;
         float attackCooldown = 0f;
 
-        // Faz 1 (Foundation): isim ekranı + bağlantı durumu + kalıcılık modu uyarısı + pause
+        // Faz 1 (Foundation): isim ekranı + pause
         bool nameScreenActive = true;
         string nameInput = "Kahraman";
-        bool isConnected = false;
-        string connectionStatus = "";
-        bool dbModeChecked = false;
-        bool dbPersistent = true; // henüz kontrol edilmediyse iyimser varsay (yanlış alarm olmasın)
         bool paused = false;
         int prevMyHp = -1;        // -1 = henüz görülmedi (ilk snapshot'ta yanlış "yeniden doğdun" göstermesin)
         string respawnMsg = "";
@@ -303,7 +290,7 @@ namespace MMO
         {
             SetupScene();
             LoadAudio();
-            cts = new CancellationTokenSource();
+            net = new NetConnection(this, url, maxConnectRetries, maxRetryDelaySec);
             nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
             // Bağlantı, isim ekranında oyuncu "Oyna"ya basınca başlar (bkz. StartConnecting).
         }
@@ -314,118 +301,7 @@ namespace MMO
             nameScreenActive = false;
             string trimmed = nameInput == null ? "" : nameInput.Trim();
             playerName = trimmed.Length == 0 ? "Kahraman" : trimmed;
-            StartCoroutine(CheckPersistenceMode());
-            _ = ConnectLoop();
-        }
-
-        // Faz 1 (Foundation): bağlanamazsa üstel gecikmeyle tekrar dener — SADECE başlangıçta.
-        // Oyun-içi bağlantı kopması sonrası otomatik yeniden bağlanma Faz 2 kapsamındadır
-        // (bkz. Docs/PRODUCTION_TIMELINE.md, Docs/REPOSITORY_AUDIT.md A-10).
-        async Task ConnectLoop()
-        {
-            float delay = 1f;
-            int attempt = 0;
-            while (!cts.IsCancellationRequested)
-            {
-                attempt++;
-                connectionStatus = attempt == 1 ? "Sunucuya bağlanılıyor..." : ("Yeniden deneniyor... (" + attempt + ". deneme)");
-                ws = new ClientWebSocket();
-                try
-                {
-                    await ws.ConnectAsync(new Uri(url), cts.Token);
-                    Debug.Log("[NetClient] bağlandı: " + url + " olarak '" + playerName + "'");
-                    isConnected = true;
-                    connectionStatus = "";
-                    outbound.Enqueue(Protocol.EncodeJoin(playerName));
-                    _ = ReceiveLoop();
-                    _ = SendLoop();
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (cts.IsCancellationRequested) return;
-                    Debug.LogWarning("[NetClient] bağlanılamadı (" + attempt + ". deneme): " + e.Message);
-                    if (maxConnectRetries > 0 && attempt >= maxConnectRetries)
-                    {
-                        connectionStatus = "Sunucuya bağlanılamadı (" + attempt + " deneme). Sunucuyu başlat (scripts\\start-game.ps1) ve sahneyi yeniden oynat.";
-                        Debug.LogError("[NetClient] " + connectionStatus);
-                        return;
-                    }
-                    connectionStatus = "Sunucu bulunamadı — " + Mathf.CeilToInt(delay) + " sn sonra tekrar denenecek. (Sunucu açık mı? scripts\\start-game.ps1)";
-                    try { await Task.Delay(TimeSpan.FromSeconds(delay), cts.Token); }
-                    catch { return; }
-                    delay = Mathf.Min(delay * 2f, maxRetryDelaySec);
-                }
-            }
-        }
-
-        // Faz 1 (Foundation): sunucunun /healthz'inden kalıcılık modunu (DB var mı) okur (A-05).
-        // Tel protokolüne dokunmaz — ayrı, tek seferlik bir HTTP isteğidir.
-        IEnumerator CheckPersistenceMode()
-        {
-            string healthUrl = ToHealthzUrl(url);
-            if (healthUrl == null) yield break;
-            using (var req = UnityWebRequest.Get(healthUrl))
-            {
-                req.timeout = 3;
-                yield return req.SendWebRequest();
-                if (req.result == UnityWebRequest.Result.Success)
-                {
-                    dbPersistent = req.downloadHandler.text.Contains("\"db\":true");
-                    dbModeChecked = true;
-                }
-            }
-        }
-
-        static string ToHealthzUrl(string wsUrl)
-        {
-            if (string.IsNullOrEmpty(wsUrl)) return null;
-            string h = wsUrl.Replace("wss://", "https://").Replace("ws://", "http://");
-            int idx = h.IndexOf("/ws", StringComparison.Ordinal);
-            if (idx >= 0) h = h.Substring(0, idx);
-            return h.TrimEnd('/') + "/healthz";
-        }
-
-        async Task ReceiveLoop()
-        {
-            var buf = new byte[64 * 1024];
-            try
-            {
-                while (ws.State == WebSocketState.Open && !cts.IsCancellationRequested)
-                {
-                    using (var mem = new System.IO.MemoryStream())
-                    {
-                        WebSocketReceiveResult res;
-                        do
-                        {
-                            res = await ws.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token);
-                            if (res.MessageType == WebSocketMessageType.Close) return;
-                            mem.Write(buf, 0, res.Count);
-                        } while (!res.EndOfMessage);
-                        inbound.Enqueue(mem.ToArray());
-                    }
-                }
-            }
-            finally
-            {
-                if (!cts.IsCancellationRequested)
-                {
-                    isConnected = false;
-                    connectionStatus = "Bağlantı koptu. (Otomatik yeniden bağlanma Faz 2'de eklenecek — şimdilik sahneyi yeniden başlat.)";
-                    Debug.LogWarning("[NetClient] " + connectionStatus);
-                }
-            }
-        }
-
-        async Task SendLoop()
-        {
-            while (ws.State == WebSocketState.Open && !cts.IsCancellationRequested)
-            {
-                if (outbound.TryDequeue(out var frame))
-                    await ws.SendAsync(new ArraySegment<byte>(frame), WebSocketMessageType.Binary, true, cts.Token);
-                else
-                    await Task.Delay(5, cts.Token);
-            }
+            net.Begin(playerName);
         }
 
         void Update()
@@ -434,7 +310,7 @@ namespace MMO
             if (nameScreenActive) return;
 
             // 1) gelen mesajlar
-            while (inbound.TryDequeue(out var msg))
+            while (net.Inbound.TryDequeue(out var msg))
             {
                 if (Protocol.TryDecodeJoined(msg, out var id))
                 {
@@ -639,11 +515,11 @@ namespace MMO
             }
             if (paused)
             {
-                if (ws != null && ws.State == WebSocketState.Open) outbound.Enqueue(Protocol.EncodeMove(0, 0));
+                if (net.SocketOpen) net.Outbound.Enqueue(Protocol.EncodeMove(0, 0));
                 return;
             }
 
-            if (ws == null || ws.State != WebSocketState.Open) return;
+            if (!net.SocketOpen) return;
             var kb = Keyboard.current;
             var mouse = Mouse.current;
 
@@ -655,21 +531,21 @@ namespace MMO
             }
             if (chatOpen)
             {
-                outbound.Enqueue(Protocol.EncodeMove(0, 0)); // yazarken dur
+                net.Outbound.Enqueue(Protocol.EncodeMove(0, 0)); // yazarken dur
                 return;
             }
 
             if (kb != null && kb.iKey.wasPressedThisFrame) showInventory = !showInventory;
             if (kb != null && kb.cKey.wasPressedThisFrame) showCrafting = !showCrafting;
             if (kb != null && kb.kKey.wasPressedThisFrame) showCharSheet = !showCharSheet; // Faz A: karakter sayfası
-            if (kb != null && kb.mKey.wasPressedThisFrame) { showMarket = !showMarket; if (showMarket) outbound.Enqueue(Protocol.EncodeMarketBrowse()); }
-            if (kb != null && kb.gKey.wasPressedThisFrame) { showGuild = !showGuild; if (showGuild) outbound.Enqueue(Protocol.EncodeGuildInfoReq()); }
+            if (kb != null && kb.mKey.wasPressedThisFrame) { showMarket = !showMarket; if (showMarket) net.Outbound.Enqueue(Protocol.EncodeMarketBrowse()); }
+            if (kb != null && kb.gKey.wasPressedThisFrame) { showGuild = !showGuild; if (showGuild) net.Outbound.Enqueue(Protocol.EncodeGuildInfoReq()); }
             if (kb != null && kb.jKey.wasPressedThisFrame) showProf = !showProf;
-            if (kb != null && kb.tKey.wasPressedThisFrame) { showLeader = !showLeader; if (showLeader) outbound.Enqueue(Protocol.EncodeLeaderReq()); }
-            if (kb != null && kb.qKey.wasPressedThisFrame) { showQuests = !showQuests; if (showQuests) outbound.Enqueue(Protocol.EncodeQuestList()); }
+            if (kb != null && kb.tKey.wasPressedThisFrame) { showLeader = !showLeader; if (showLeader) net.Outbound.Enqueue(Protocol.EncodeLeaderReq()); }
+            if (kb != null && kb.qKey.wasPressedThisFrame) { showQuests = !showQuests; if (showQuests) net.Outbound.Enqueue(Protocol.EncodeQuestList()); }
             if (kb != null && kb.rKey.wasPressedThisFrame)
             {
-                if (zoneId == "meadow") { outbound.Enqueue(Protocol.EncodeRepair()); repairMsg = "Tamir ediliyor..."; }
+                if (zoneId == "meadow") { net.Outbound.Enqueue(Protocol.EncodeRepair()); repairMsg = "Tamir ediliyor..."; }
                 else repairMsg = "Tamir sadece güvenli bölgede (Başlangıç Çayırı)";
                 repairMsgTimer = 2.5f;
             }
@@ -677,13 +553,13 @@ namespace MMO
             if (kb != null && kb.pKey.wasPressedThisFrame) InviteNearest();
             if (kb != null && kb.yKey.wasPressedThisFrame && pendingInviteTimer > 0f)
             {
-                outbound.Enqueue(Protocol.EncodePartyAccept());
+                net.Outbound.Enqueue(Protocol.EncodePartyAccept());
                 pendingInviteTimer = 0f; pendingInviteFrom = "";
                 partyMsg = "Partiye katıldın"; partyMsgTimer = 2.5f;
             }
             if (kb != null && kb.lKey.wasPressedThisFrame && partyMembers.Count > 0)
             {
-                outbound.Enqueue(Protocol.EncodePartyLeave());
+                net.Outbound.Enqueue(Protocol.EncodePartyLeave());
                 partyMsg = "Partiden ayrıldın"; partyMsgTimer = 2.5f;
             }
 
@@ -732,7 +608,7 @@ namespace MMO
             // 5) hedef mob menzildeyse otomatik saldır
             if (attackTarget != 0 && attackCooldown <= 0f && InRangeOfMob(attackTarget))
             {
-                outbound.Enqueue(Protocol.EncodeAttack(attackTarget));
+                net.Outbound.Enqueue(Protocol.EncodeAttack(attackTarget));
                 if (playerAnim != null) playerAnim.SetTrigger("Attack");
                 attackCooldown = 0.3f;
             }
@@ -751,7 +627,7 @@ namespace MMO
                     if (Vector2.Distance(meP, nodePos) <= AttackReach)
                     {
                         moveTarget = null; // dur ve topla (hareket toplamayı iptal eder)
-                        if (!gatherRequested) { outbound.Enqueue(Protocol.EncodeGather(gatherTarget)); gatherRequested = true; }
+                        if (!gatherRequested) { net.Outbound.Enqueue(Protocol.EncodeGather(gatherTarget)); gatherRequested = true; }
                     }
                 }
             }
@@ -770,7 +646,7 @@ namespace MMO
                     if (Vector2.Distance(meP, cPos) <= AttackReach)
                     {
                         moveTarget = null;
-                        if (!corpseRequested) { outbound.Enqueue(Protocol.EncodeLootCorpse(corpseTarget)); corpseRequested = true; }
+                        if (!corpseRequested) { net.Outbound.Enqueue(Protocol.EncodeLootCorpse(corpseTarget)); corpseRequested = true; }
                     }
                 }
             }
@@ -780,7 +656,7 @@ namespace MMO
             if (sendTimer >= 1f / sendRate)
             {
                 sendTimer = 0f;
-                outbound.Enqueue(Protocol.EncodeMove(dir.x, dir.y));
+                net.Outbound.Enqueue(Protocol.EncodeMove(dir.x, dir.y));
             }
 
             // animasyon: yürüme hızını Animator'a bildir (kurulunca otomatik yürür; yoksa no-op)
@@ -843,7 +719,7 @@ namespace MMO
             }
             if (best != 0)
             {
-                outbound.Enqueue(Protocol.EncodePartyInvite(best));
+                net.Outbound.Enqueue(Protocol.EncodePartyInvite(best));
                 partyMsg = "Davet gönderildi"; partyMsgTimer = 2.5f;
             }
             else { partyMsg = "Yakında oyuncu yok"; partyMsgTimer = 2.5f; }
@@ -937,7 +813,7 @@ namespace MMO
             if (t.Length == 0) return;
             byte scope = 0; // bölge
             if (t.StartsWith("/g ")) { scope = 1; t = t.Substring(3); } // global
-            if (t.Length > 0) outbound.Enqueue(Protocol.EncodeChat(scope, t));
+            if (t.Length > 0) net.Outbound.Enqueue(Protocol.EncodeChat(scope, t));
         }
 
         void UseAbility(int idx)
@@ -951,7 +827,7 @@ namespace MMO
                 target = attackTarget != 0 ? attackTarget : NearestMobId();
                 if (target == 0) { noticeMsg = "Hedef yok"; noticeTimer = 1.5f; return; }
             }
-            outbound.Enqueue(Protocol.EncodeAbility((byte)idx, target));
+            net.Outbound.Enqueue(Protocol.EncodeAbility((byte)idx, target));
             if (playerAnim != null)
             {
                 // yeteneğe özel animasyon: heal=Buff (savaş narası), 1.yetenek=Attack2 (combo), 2.=Attack3 (360 dönüş)
@@ -1043,7 +919,7 @@ namespace MMO
                 float d = Vector2.Distance(me, new Vector2(e.X, e.Y));
                 if (d < bestD) { bestD = d; best = e.Id; }
             }
-            if (best != 0) { outbound.Enqueue(Protocol.EncodeAttack(best)); if (playerAnim != null) playerAnim.SetTrigger("Attack"); }
+            if (best != 0) { net.Outbound.Enqueue(Protocol.EncodeAttack(best)); if (playerAnim != null) playerAnim.SetTrigger("Attack"); }
         }
 
         void ApplySnapshot(List<Protocol.Entity> ents)
@@ -1258,10 +1134,10 @@ namespace MMO
         {
             // Faz 1 (Foundation): isim ekranı / bağlanma ekranı — geri kalan HUD henüz çizilmez.
             if (nameScreenActive) { DrawNameScreen(); return; }
-            if (!isConnected) { DrawConnectingScreen(); return; }
+            if (!net.IsConnected) { DrawConnectingScreen(); return; }
 
             // A-05: sunucu bellek modundaysa (DB'siz) ilerleme kaydedilmediğini belirgin göster.
-            if (dbModeChecked && !dbPersistent)
+            if (net.DbModeChecked && !net.DbPersistent)
             {
                 var warn = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
                 warn.normal.textColor = new Color(1f, 0.3f, 0.3f);
@@ -1473,11 +1349,11 @@ namespace MMO
                     float ry = py + 56 + i * 24;
                     string label = (equipped ? "★ " : "") + it.Name + "   x" + it.Qty;
                     if (GUI.Button(new Rect(px + 8, ry, w - 86, 22), label))
-                        outbound.Enqueue(Protocol.EncodeEquip(it.DefID));
+                        net.Outbound.Enqueue(Protocol.EncodeEquip(it.DefID));
                     if (GUI.Button(new Rect(px + w - 74, ry, 66, 22), "Sat", sbtn))
                     {
                         long pr; long.TryParse(sellPriceStr, out pr);
-                        if (pr > 0) outbound.Enqueue(Protocol.EncodeMarketList(it.DefID, 1, pr));
+                        if (pr > 0) net.Outbound.Enqueue(Protocol.EncodeMarketList(it.DefID, 1, pr));
                     }
                 }
             }
@@ -1506,7 +1382,7 @@ namespace MMO
                     cbtn.normal.textColor = RarityColor(r.OutRarity);
                     cbtn.hover.textColor = RarityColor(r.OutRarity);
                     if (GUI.Button(new Rect(cx + 8, cy + 30 + i * 26, cw - 16, 24), r.OutName + "  <-  " + inp))
-                        outbound.Enqueue(Protocol.EncodeCraft(r.Id));
+                        net.Outbound.Enqueue(Protocol.EncodeCraft(r.Id));
                 }
             }
 
@@ -1539,7 +1415,7 @@ namespace MMO
                     mbtn.hover.textColor = RarityColor(e.Rarity);
                     string label = e.Name + " x" + e.Qty + "   —   " + e.Price + " altın   (" + e.Seller + ")";
                     if (GUI.Button(new Rect(mx + 8, my + 30 + i * 24, mw - 16, 22), label))
-                        outbound.Enqueue(Protocol.EncodeMarketBuy(e.Id));
+                        net.Outbound.Enqueue(Protocol.EncodeMarketBuy(e.Id));
                 }
             }
 
@@ -1561,16 +1437,16 @@ namespace MMO
                     GUI.Label(new Rect(gx + 12, gy + 34, 70, 22), "İsim:", gl2);
                     guildNameInput = GUI.TextField(new Rect(gx + 70, gy + 33, 180, 22), guildNameInput, 24);
                     if (GUI.Button(new Rect(gx + 258, gy + 33, 80, 22), "Kur (100)", gbtn))
-                        outbound.Enqueue(Protocol.EncodeGuildCreate(guildNameInput));
+                        net.Outbound.Enqueue(Protocol.EncodeGuildCreate(guildNameInput));
                     if (GUI.Button(new Rect(gx + 342, gy + 33, 80, 22), "Katıl", gbtn))
-                        outbound.Enqueue(Protocol.EncodeGuildJoin(guildNameInput));
+                        net.Outbound.Enqueue(Protocol.EncodeGuildJoin(guildNameInput));
                 }
                 else
                 {
                     GUI.Label(new Rect(gx + 12, gy + 6, gw - 20, 22),
                         "LONCA: " + guildName + (guildIsLeader ? " (lider)" : "") + "   —   Kasa: " + guildBankGold + " altın", gt);
                     if (GUI.Button(new Rect(gx + gw - 70, gy + 6, 60, 20), "Ayrıl", gbtn))
-                        outbound.Enqueue(Protocol.EncodeGuildLeave());
+                        net.Outbound.Enqueue(Protocol.EncodeGuildLeave());
                     float yy = gy + 30;
                     if (!guildIsLeader)
                     {
@@ -1587,9 +1463,9 @@ namespace MMO
                             GUI.Label(new Rect(gx + 12, yy, 200, 20), m.Name + tag, gl2);
                             if (m.Name != playerName && m.Rank != 2)
                             {
-                                if (m.Rank == 0 && GUI.Button(new Rect(gx + 215, yy, 62, 20), "Terfi", sbtn)) outbound.Enqueue(Protocol.EncodeGuildPromote(m.Name));
-                                if (m.Rank == 1 && GUI.Button(new Rect(gx + 215, yy, 62, 20), "İndir", sbtn)) outbound.Enqueue(Protocol.EncodeGuildDemote(m.Name));
-                                if (GUI.Button(new Rect(gx + 281, yy, 50, 20), "Kov", sbtn)) outbound.Enqueue(Protocol.EncodeGuildKick(m.Name));
+                                if (m.Rank == 0 && GUI.Button(new Rect(gx + 215, yy, 62, 20), "Terfi", sbtn)) net.Outbound.Enqueue(Protocol.EncodeGuildPromote(m.Name));
+                                if (m.Rank == 1 && GUI.Button(new Rect(gx + 215, yy, 62, 20), "İndir", sbtn)) net.Outbound.Enqueue(Protocol.EncodeGuildDemote(m.Name));
+                                if (GUI.Button(new Rect(gx + 281, yy, 50, 20), "Kov", sbtn)) net.Outbound.Enqueue(Protocol.EncodeGuildKick(m.Name));
                             }
                             yy += 22;
                         }
@@ -1599,9 +1475,9 @@ namespace MMO
                     guildGoldInput = GUI.TextField(new Rect(gx + 64, yy, 80, 22), guildGoldInput, 9);
                     long gamt; long.TryParse(guildGoldInput, out gamt);
                     if (GUI.Button(new Rect(gx + 150, yy, 80, 22), "Yatır", gbtn) && gamt > 0)
-                        outbound.Enqueue(Protocol.EncodeGuildDepositGold(gamt));
+                        net.Outbound.Enqueue(Protocol.EncodeGuildDepositGold(gamt));
                     if (GUI.Button(new Rect(gx + 234, yy, 80, 22), "Çek", gbtn) && gamt > 0)
-                        outbound.Enqueue(Protocol.EncodeGuildWithdrawGold(gamt));
+                        net.Outbound.Enqueue(Protocol.EncodeGuildWithdrawGold(gamt));
                     yy += 28;
                     // kasa eşyaları (çek)
                     GUI.Label(new Rect(gx + 12, yy, gw - 20, 18), "Kasa eşyaları (tıkla=çek):", gl2); yy += 20;
@@ -1610,7 +1486,7 @@ namespace MMO
                         var bi = guildBank[i];
                         gbtn.normal.textColor = RarityColor(bi.Rarity); gbtn.hover.textColor = RarityColor(bi.Rarity);
                         if (GUI.Button(new Rect(gx + 16, yy, gw - 32, 22), bi.Name + " x" + bi.Qty))
-                            outbound.Enqueue(Protocol.EncodeGuildWithdrawItem(bi.InstID));
+                            net.Outbound.Enqueue(Protocol.EncodeGuildWithdrawItem(bi.InstID));
                         yy += 24;
                     }
                     gbtn.normal.textColor = Color.white; gbtn.hover.textColor = Color.white;
@@ -1621,7 +1497,7 @@ namespace MMO
                     {
                         var it = inventory[i];
                         if (GUI.Button(new Rect(gx + 16, yy, gw - 32, 22), it.Name + " x" + it.Qty))
-                            outbound.Enqueue(Protocol.EncodeGuildDepositItem(it.DefID, it.Qty));
+                            net.Outbound.Enqueue(Protocol.EncodeGuildDepositItem(it.DefID, it.Qty));
                         yy += 24;
                     }
                 }
@@ -1670,8 +1546,8 @@ namespace MMO
                     string suffix = q.State == 1 ? ("  " + q.Progress + "/" + q.Count) : "";
                     ql.normal.textColor = q.State == 3 ? new Color(0.5f, 0.8f, 0.5f) : (q.State == 2 ? new Color(1f, 0.9f, 0.3f) : Color.white);
                     GUI.Label(new Rect(qx + 12, ry, qw - 130, 28), q.Name + suffix, ql);
-                    if (q.State == 0) { if (GUI.Button(new Rect(qx + qw - 110, ry, 100, 24), "Kabul Et", qbtn)) outbound.Enqueue(Protocol.EncodeQuestAccept(q.Id)); }
-                    else if (q.State == 2) { if (GUI.Button(new Rect(qx + qw - 110, ry, 100, 24), "Ödül Al", qbtn)) outbound.Enqueue(Protocol.EncodeQuestClaim(q.Id)); }
+                    if (q.State == 0) { if (GUI.Button(new Rect(qx + qw - 110, ry, 100, 24), "Kabul Et", qbtn)) net.Outbound.Enqueue(Protocol.EncodeQuestAccept(q.Id)); }
+                    else if (q.State == 2) { if (GUI.Button(new Rect(qx + qw - 110, ry, 100, 24), "Ödül Al", qbtn)) net.Outbound.Enqueue(Protocol.EncodeQuestClaim(q.Id)); }
                     else if (q.State == 3) { GUI.Label(new Rect(qx + qw - 110, ry, 100, 24), "✓ Tamam", ql); }
                 }
             }
@@ -1813,7 +1689,7 @@ namespace MMO
             var st = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             st.normal.textColor = Color.white;
             GUI.Label(new Rect(0, Screen.height / 2f - 20, Screen.width, 40),
-                string.IsNullOrEmpty(connectionStatus) ? "Bağlanılıyor..." : connectionStatus, st);
+                string.IsNullOrEmpty(net.Status) ? "Bağlanılıyor..." : net.Status, st);
         }
 
         // Faz 1 (Foundation): ESC ile aç/kapa — devam et / çıkış.
@@ -1881,7 +1757,7 @@ namespace MMO
                 GUI.Label(new Rect(x + 16, ry, 210, 26), attrNames[i] + ":  " + vals[i], lab);
                 GUI.enabled = attrData.Points > 0;
                 if (GUI.Button(new Rect(x + w - 52, ry - 2, 34, 28), "+", btn))
-                    outbound.Enqueue(Protocol.EncodeSpendAttr((byte)i)); // sunucu doğrular, yeni paket döner
+                    net.Outbound.Enqueue(Protocol.EncodeSpendAttr((byte)i)); // sunucu doğrular, yeni paket döner
                 GUI.enabled = true;
             }
 
@@ -1935,7 +1811,7 @@ namespace MMO
                 if (GUI.Button(new Rect(x + 16, by, w - 32, 30),
                     (active ? "✔ " : "") + o.Name + "  (+" + o.DmgBonus + " hasar)", sbtn))
                 {
-                    if (!active) outbound.Enqueue(Protocol.EncodeSelectSpec(o.Id)); // sunucu doğrular
+                    if (!active) net.Outbound.Enqueue(Protocol.EncodeSelectSpec(o.Id)); // sunucu doğrular
                 }
                 GUI.color = prev;
             }
@@ -1949,10 +1825,10 @@ namespace MMO
                 GUI.Label(new Rect(x + 16, ey + 26, w - 30, 20), "Silah +" + enchantInfo.WLvl + "   Zırh +" + enchantInfo.ALvl, lab);
                 if (GUI.Button(new Rect(x + 16, ey + 50, (w - 40) / 2, 30),
                     "Silah +" + (enchantInfo.WLvl + 1) + "\n" + enchantInfo.WCost + "g %" + enchantInfo.WPct, ebtn))
-                    outbound.Enqueue(Protocol.EncodeEnchant(0));
+                    net.Outbound.Enqueue(Protocol.EncodeEnchant(0));
                 if (GUI.Button(new Rect(x + 26 + (w - 40) / 2, ey + 50, (w - 40) / 2, 30),
                     "Zırh +" + (enchantInfo.ALvl + 1) + "\n" + enchantInfo.ACost + "g %" + enchantInfo.APct, ebtn))
-                    outbound.Enqueue(Protocol.EncodeEnchant(1));
+                    net.Outbound.Enqueue(Protocol.EncodeEnchant(1));
             }
 
             // Faz K: hizip itibarları
@@ -2027,13 +1903,7 @@ namespace MMO
 
         async void OnDestroy()
         {
-            try { cts?.Cancel(); } catch { }
-            if (ws != null && ws.State == WebSocketState.Open)
-            {
-                try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); }
-                catch { }
-            }
-            ws?.Dispose();
+            if (net != null) await net.CloseGracefully();
         }
     }
 }
