@@ -24,9 +24,20 @@ namespace MMO
             {
                 int n = 0; int.TryParse(zoneId.Substring(8), out n);
                 Add("dungeon_env_" + (n % 3));
-                RenderSettings.ambientLight = new Color(0.30f, 0.27f, 0.24f); // loş zindan
-                RenderSettings.fogColor = new Color(0.05f, 0.04f, 0.05f);
-                RenderSettings.fogStartDistance = 18f; RenderSettings.fogEndDistance = 55f;
+                // Faz 3 (gün 12-14): "Buz Kuyusu" aynı modüler zindan geometrisini kullanır,
+                // yalnızca soğuk ışık/sis profiliyle ayrışır (yeni 3D varlık yok — bkz. D-15).
+                if (zoneName == "Buz Kuyusu")
+                {
+                    RenderSettings.ambientLight = new Color(0.55f, 0.62f, 0.72f); // soğuk mavi-beyaz
+                    RenderSettings.fogColor = new Color(0.65f, 0.78f, 0.88f);     // buzlu, açık sis
+                    RenderSettings.fogStartDistance = 10f; RenderSettings.fogEndDistance = 40f;
+                }
+                else // Kaçakçı Mağarası (eski "Haydut İni")
+                {
+                    RenderSettings.ambientLight = new Color(0.30f, 0.27f, 0.24f); // loş zindan
+                    RenderSettings.fogColor = new Color(0.05f, 0.04f, 0.05f);
+                    RenderSettings.fogStartDistance = 18f; RenderSettings.fogEndDistance = 55f;
+                }
             }
             else if (zoneId == "forest")
             {
