@@ -30,6 +30,7 @@ namespace MMO
         float myReach = 2.7f;           // silaha göre saldırı menzili (yay/asa uzun) — Faz 23
 
         NetConnection net; // Faz 2 (İstemci sağlığı) gün 1: soket/retry/reconnect NetConnection.cs'e taşındı
+        int lastSeenConnectGen = 0; // Faz 2 gün 6: rejoin resync tespiti (bkz. ClearWorldState)
 
         ulong myId = 0;
         readonly Dictionary<ulong, GameObject> cubes = new Dictionary<ulong, GameObject>();
@@ -187,6 +188,7 @@ namespace MMO
         // Faz 1 (Foundation): isim ekranı + pause
         bool nameScreenActive = true;
         string nameInput = "Kahraman";
+        string serverAddressInput = ""; // Faz 2 gün 6: LAN sunucu adresi (isim ekranında düzenlenebilir)
         bool paused = false;
         int prevMyHp = -1;        // -1 = henüz görülmedi (ilk snapshot'ta yanlış "yeniden doğdun" göstermesin)
         string respawnMsg = "";
@@ -234,17 +236,26 @@ namespace MMO
         {
             SetupScene();
             LoadAudio();
-            net = new NetConnection(this, url, maxConnectRetries, maxRetryDelaySec);
             nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
-            // Bağlantı, isim ekranında oyuncu "Oyna"ya basınca başlar (bkz. StartConnecting).
+            // Faz 2 gün 6: son kullanılan sunucu adresini hatırla (LAN'da arkadaşının IP'sini
+            // her seferinde yeniden yazmasın). Inspector'daki `url` ilk-kurulum varsayılanı.
+            serverAddressInput = PlayerPrefs.GetString(ServerAddressPrefKey, url);
+            // net, StartConnecting()'te (adres onaylanınca) kurulur — bkz. aşağıda.
         }
 
         // İsim ekranından çağrılır: kalıcılık-modu kontrolünü ve bağlantı döngüsünü başlatır.
+        const string ServerAddressPrefKey = "mmo_server_url";
         void StartConnecting()
         {
             nameScreenActive = false;
             string trimmed = nameInput == null ? "" : nameInput.Trim();
             playerName = trimmed.Length == 0 ? "Kahraman" : trimmed;
+
+            string addr = serverAddressInput == null ? "" : serverAddressInput.Trim();
+            url = addr.Length == 0 ? url : addr; // boşsa Inspector varsayılanında kal
+            PlayerPrefs.SetString(ServerAddressPrefKey, url);
+
+            net = new NetConnection(this, url, maxConnectRetries, maxRetryDelaySec);
             net.Begin(playerName);
         }
 
@@ -252,6 +263,14 @@ namespace MMO
         {
             // İsim ekranındayken (henüz "Oyna"ya basılmadıysa) oyun mantığı çalışmaz.
             if (nameScreenActive) return;
+
+            // Faz 2 gün 6: (yeniden) bağlanış tespiti -> eski varlık/görsel durumunu temizle
+            // (rejoin resync — sunucu zaten taze envanter/ekipman/vb. gönderecek).
+            if (net.ConnectGeneration != lastSeenConnectGen)
+            {
+                lastSeenConnectGen = net.ConnectGeneration;
+                ClearWorldState();
+            }
 
             // 1) gelen mesajlar (Faz 2 gün 2: dispatch NetClient.ProtocolDispatch.cs'e taşındı)
             ProcessInboundMessages();

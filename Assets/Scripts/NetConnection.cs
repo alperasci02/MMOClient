@@ -24,12 +24,17 @@ namespace MMO
         public bool DbModeChecked { get; private set; }
         public bool DbPersistent { get; private set; } = true; // henüz kontrol edilmediyse iyimser varsay
 
+        // Faz 2 gün 6: her başarılı (yeniden) bağlanışta artar — NetClient bunu izleyip
+        // varlık/görsel durumunu sıfırlayarak "rejoin resync" yapar (bkz. NetClient.WorldView.cs).
+        public int ConnectGeneration { get; private set; }
+
         public bool SocketOpen => ws != null && ws.State == WebSocketState.Open;
 
         readonly MonoBehaviour host; // StartCoroutine için (CheckPersistenceMode)
         readonly string url;
         readonly int maxRetries;
         readonly float maxRetryDelaySec;
+        string playerName;
         ClientWebSocket ws;
         CancellationTokenSource cts;
 
@@ -44,21 +49,26 @@ namespace MMO
         // İsim ekranından çağrılır: kalıcılık-modu kontrolünü ve bağlantı döngüsünü başlatır.
         public void Begin(string playerName)
         {
+            this.playerName = playerName;
             cts = new CancellationTokenSource();
             host.StartCoroutine(CheckPersistenceMode());
-            _ = ConnectLoop(playerName);
+            _ = ConnectLoop();
         }
 
-        // Faz 1 (Foundation): bağlanamazsa üstel gecikmeyle tekrar dener — SADECE başlangıçta.
-        // Oyun-içi bağlantı kopması sonrası otomatik yeniden bağlanma Faz 2'nin gün 6 işidir (A-10).
-        async Task ConnectLoop(string playerName)
+        // Faz 1 (Foundation): bağlanamazsa üstel gecikmeyle tekrar dener — başlangıçta VE
+        // Faz 2 gün 6'dan itibaren oyun-içi bağlantı kopması sonrası da (ReceiveLoop bu
+        // metodu tekrar çağırır — bkz. aşağıda). maxRetries sadece İLK bağlantıya uygulanır;
+        // kopma sonrası yeniden bağlanma sonsuz dener (oyuncu ortasında pes etmemeli).
+        async Task ConnectLoop(bool isReconnect = false)
         {
             float delay = 1f;
             int attempt = 0;
             while (!cts.IsCancellationRequested)
             {
                 attempt++;
-                Status = attempt == 1 ? "Sunucuya bağlanılıyor..." : ("Yeniden deneniyor... (" + attempt + ". deneme)");
+                Status = attempt == 1
+                    ? (isReconnect ? "Bağlantı koptu — yeniden bağlanılıyor..." : "Sunucuya bağlanılıyor...")
+                    : ("Yeniden deneniyor... (" + attempt + ". deneme)");
                 ws = new ClientWebSocket();
                 try
                 {
@@ -66,6 +76,7 @@ namespace MMO
                     Debug.Log("[NetConnection] bağlandı: " + url + " olarak '" + playerName + "'");
                     IsConnected = true;
                     Status = "";
+                    ConnectGeneration++;
                     Outbound.Enqueue(Protocol.EncodeJoin(playerName));
                     _ = ReceiveLoop();
                     _ = SendLoop();
@@ -75,7 +86,9 @@ namespace MMO
                 {
                     if (cts.IsCancellationRequested) return;
                     Debug.LogWarning("[NetConnection] bağlanılamadı (" + attempt + ". deneme): " + e.Message);
-                    if (maxRetries > 0 && attempt >= maxRetries)
+                    // İlk bağlantıda maxRetries sınırı var; kopma-sonrası yeniden bağlanmada yok
+                    // (oyuncu içeride sayılır, sunucu geri gelene kadar sabırla denemeli).
+                    if (!isReconnect && maxRetries > 0 && attempt >= maxRetries)
                     {
                         Status = "Sunucuya bağlanılamadı (" + attempt + " deneme). Sunucuyu başlat (scripts\\start-game.ps1) ve sahneyi yeniden oynat.";
                         Debug.LogError("[NetConnection] " + Status);
@@ -140,9 +153,13 @@ namespace MMO
             {
                 if (!cts.IsCancellationRequested)
                 {
+                    // Faz 2 gün 6: oyun-içi kopma -> otomatik yeniden bağlan (sonsuz dener).
+                    // NetClient bunu net.IsConnected/net.Status üzerinden mevcut "bağlanılıyor"
+                    // ekranıyla zaten gösterir; ConnectGeneration artışı entity/görsel durumunu
+                    // sıfırlatır (rejoin resync).
                     IsConnected = false;
-                    Status = "Bağlantı koptu. (Otomatik yeniden bağlanma Faz 2'de eklenecek — şimdilik sahneyi yeniden başlat.)";
-                    Debug.LogWarning("[NetConnection] " + Status);
+                    Debug.LogWarning("[NetConnection] bağlantı koptu, yeniden bağlanılıyor...");
+                    _ = ConnectLoop(isReconnect: true);
                 }
             }
         }

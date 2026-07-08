@@ -553,7 +553,7 @@ namespace MMO
         // Faz 1 (Foundation): ilk-oynanış isim ekranı — bağlantı Inspector'dan değil buradan başlar.
         void DrawNameScreen()
         {
-            float w = 420, h = 190;
+            float w = 460, h = 290;
             float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
             GUI.color = new Color(0f, 0f, 0f, 0.85f);
             GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
@@ -569,16 +569,30 @@ namespace MMO
 
             GUI.SetNextControlName("nameField");
             var nf = new GUIStyle(GUI.skin.textField) { fontSize = 16 };
-            nameInput = GUI.TextField(new Rect(x + 100, y + 68, w - 140, 30), nameInput, 24, nf);
+            nameInput = GUI.TextField(new Rect(x + 110, y + 68, w - 150, 30), nameInput, 24, nf);
             GUI.FocusControl("nameField");
 
             var hint = new GUIStyle(GUI.skin.label) { fontSize = 12 };
             hint.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
             GUI.Label(new Rect(x + 24, y + 104, w - 48, 20), "Aynı isimle girersen karakterin/altının kalıcı kalır.", hint);
 
+            // Faz 2 gün 6: LAN sunucu adresi — tek bilgisayarda (Host) localhost, arkadaşının
+            // makinesine (Join) bağlanırken onun LAN IP'si. Ayrı bir "Host/Join" butonu yok:
+            // istemci sunucuyu başlatmaz (bu scripts\start-game.ps1'in işi), sadece nereye
+            // bağlanacağını seçer.
+            GUI.Label(new Rect(x + 24, y + 136, 90, 28), "Sunucu:", lbl);
+            GUI.SetNextControlName("serverField");
+            serverAddressInput = GUI.TextField(new Rect(x + 110, y + 134, w - 150, 30), serverAddressInput, 64, nf);
+
+            var hint2 = new GUIStyle(GUI.skin.label) { fontSize = 11 };
+            hint2.normal.textColor = new Color(0.65f, 0.8f, 0.9f);
+            GUI.Label(new Rect(x + 24, y + 170, w - 48, 34),
+                "Kendi bilgisayarında (Host): ws://localhost:8080/ws\nArkadaşına bağlanıyorsan (Join): ws://<onun-IP'si>:8080/ws",
+                hint2);
+
             var btn = new GUIStyle(GUI.skin.button) { fontSize = 17, fontStyle = FontStyle.Bold };
             bool enterPressed = Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame;
-            if (GUI.Button(new Rect(x + w / 2f - 70, y + 138, 140, 36), "Oyna", btn) || enterPressed)
+            if (GUI.Button(new Rect(x + w / 2f - 70, y + h - 48, 140, 36), "Oyna", btn) || enterPressed)
             {
                 PlaySfx(uiClickClip);
                 StartConnecting();

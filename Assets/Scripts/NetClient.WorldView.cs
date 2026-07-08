@@ -11,6 +11,28 @@ namespace MMO
 {
     public partial class NetClient
     {
+        // Faz 2 gün 6: (yeniden) bağlanış sonrası eski varlıkları temizler — rejoin resync.
+        // Sunucu zaten taze envanter/ekipman/mastery/vb. gönderir; burada sadece bu client'ın
+        // SAHNEDEKİ eski GameObject'lerini ve id-eşlemelerini atıyoruz ki bir sonraki snapshot
+        // her şeyi sıfırdan doğru kursun (eski/yetim nesne veya yanlış id eşleşmesi kalmasın).
+        void ClearWorldState()
+        {
+            foreach (var kv in cubes) if (kv.Value != null) Destroy(kv.Value);
+            cubes.Clear();
+            targetPos.Clear();
+            prevHp.Clear();
+            hitFlash.Clear();
+            baseCol.Clear();
+            usePrefab.Clear();
+            anims.Clear();
+            lastEnts = null;
+            myId = 0;
+            prevMyHp = -1;
+            if (weaponVisual != null) { Destroy(weaponVisual); weaponVisual = null; }
+            if (armorVisual != null) { Destroy(armorVisual); armorVisual = null; }
+            playerAnim = null;
+        }
+
         void SpawnFloat(float x, float y, float z, string txt, Color c)
         {
             floaters.Add(new FloatText { Pos = new Vector3(x, y, z), Text = txt, Col = c, Life = 1.1f });
