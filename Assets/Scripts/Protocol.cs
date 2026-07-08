@@ -1,5 +1,19 @@
 // Protocol.cs — sunucunun codec.go'su ile BİREBİR aynı ikili protokol (C# aynası).
 // C# x86'da little-endian olduğu için big-endian'a elle çeviriyoruz.
+//
+// ╔═══════════════════════════════════════════════════════════════════════╗
+// ║ PROTOKOL SÖZLEŞMESİ (Docs/AI_RULES.md §3, MMO reposunda) — BU DOSYAYI  ║
+// ║ TEK BAŞINA DEĞİŞTİRME. İkizi: server/internal/realtime/codec.go       ║
+// ║ (ayrı repo: PROJECT-ANATOLIA/MMO).                                     ║
+// ║  • Çerçeve/alan düzeni değişirse İKİ dosya da AYNI oturumda güncellenir║
+// ║    (NetClient.Update'teki karşılığıyla / ws.go'daki decode dispatch).  ║
+// ║  • SnapRowSize burada = snapRowSize orada (şu an 23). Tek baytlık kayma║
+// ║    geçmişte sessiz bozulmaya yol açtı (21→22→23) — bkz. docs/06.       ║
+// ║  • Opcode'lar EKLEMELİ: yenisi 0x31'in ötesine gider, numara değişmez/ ║
+// ║    yeniden kullanılmaz.                                                ║
+// ║  • Değişiklik sonrası kanıt: sunucuda `go run ./cmd/ws-testclient` +   ║
+// ║    Unity Play testi. İkisi de geçmeden "bitti" deme.                   ║
+// ╚═══════════════════════════════════════════════════════════════════════╝
 using System;
 using System.Collections.Generic;
 using System.Text;
