@@ -97,16 +97,10 @@ namespace MMO
                         }
                     }
                 }
-                var fst = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                foreach (var f in floaters)
-                {
-                    Vector3 sp = wcam.WorldToScreenPoint(f.Pos);
-                    if (sp.z <= 0f) continue;
-                    var c = f.Col; c.a = Mathf.Clamp01(f.Life);
-                    fst.normal.textColor = c;
-                    GUI.Label(new Rect(sp.x - 40f, Screen.height - sp.y - 14f, 80f, 22f), f.Text, fst);
-                }
+                DrawFloaters(wcam); // Faz 5 his: pop-ölçekli, konturlu, kayan hasar sayıları
             }
+
+            DrawScreenFlash(); // Faz 5 his: seviye/ölüm/diriliş/bölge flaşları (dünya üstü, panel altı)
 
             // --- sol-üst durum bloğu: hafif parşömen zeminli okunaklı künye ---
             var statBg = new Rect(10, 8, 360, 150);

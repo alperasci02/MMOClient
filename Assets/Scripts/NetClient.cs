@@ -135,7 +135,7 @@ namespace MMO
         bool showLeader = false;
 
         // Görsel/juice: yüzen yazı, vuruş flaşı, can çubuğu için durum
-        struct FloatText { public Vector3 Pos; public string Text; public Color Col; public float Life; }
+        struct FloatText { public Vector3 Pos; public string Text; public Color Col; public float Life; public float Size; public float VX; }
         readonly List<FloatText> floaters = new List<FloatText>();
         readonly Dictionary<ulong, int> prevHp = new Dictionary<ulong, int>();
         readonly Dictionary<ulong, float> hitFlash = new Dictionary<ulong, float>();
@@ -285,19 +285,23 @@ namespace MMO
             if (noticeTimer > 0f) noticeTimer -= Time.deltaTime;
             if (respawnMsgTimer > 0f) respawnMsgTimer -= Time.deltaTime;
 
-            // yüzen hasar yazıları yüksel + söndür
+            TickJuice(Time.deltaTime); // Faz 5 his: flaş/level-fx/tokat zamanlayıcıları
+
+            // yüzen hasar yazıları yüksel + yana kay + söndür
             for (int i = floaters.Count - 1; i >= 0; i--)
             {
                 var f = floaters[i];
                 f.Life -= Time.deltaTime;
                 f.Pos.y += Time.deltaTime * 1.6f;
+                f.Pos.x += f.VX * Time.deltaTime;
                 floaters[i] = f;
                 if (f.Life <= 0f) floaters.RemoveAt(i);
             }
 
             // varlıkları her karede hedefe yumuşakça taşı (ağ 20Hz -> akıcı görüntü) + hareket
             // yönüne döndür + hareket hızından animasyon (mob dahil: yürüyen herkes yürür)
-            float moveK = 1f - Mathf.Exp(-14f * Time.deltaTime);
+            // Faz 5 his: hit-stop sırasında görsel interpolasyon donar (moveK=0); sends etkilenmez.
+            float moveK = HitStopped ? 0f : (1f - Mathf.Exp(-14f * Time.deltaTime));
             foreach (var kv in cubes)
             {
                 if (!targetPos.TryGetValue(kv.Key, out var tp)) continue;
@@ -306,6 +310,7 @@ namespace MMO
                 tr.position = Vector3.Lerp(tr.position, tp, moveK);
                 if (flat.sqrMagnitude > 0.0009f) // anlamlı hareket -> modeli yönüne çevir
                     tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(flat), moveK);
+                ApplyPunchScale(kv.Key, tr); // Faz 5 his: vuruş ölçek-tokatı
                 if (anims.TryGetValue(kv.Key, out var av) && av != null && kv.Key != myId)
                     av.SetFloat("Speed", Mathf.Clamp01(flat.magnitude * 2.5f)); // hedefe uzaklık ~ hız
             }

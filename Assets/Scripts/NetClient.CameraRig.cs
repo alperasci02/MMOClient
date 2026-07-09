@@ -108,6 +108,7 @@ namespace MMO
             Vector3 want = me.transform.position + new Vector3(0f, 16f, -13f);
             float camK = 1f - Mathf.Exp(-10f * Time.deltaTime); // kare-hızından bağımsız, takılmasız
             cam.transform.position = Vector3.Lerp(cam.transform.position, want, camK);
+            cam.transform.position += CameraShakeOffset(); // Faz 5 his: kamera sarsıntısı (söner)
             cam.transform.rotation = Quaternion.Euler(52f, 0f, 0f);
         }
     }

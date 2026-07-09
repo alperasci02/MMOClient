@@ -25,6 +25,8 @@ namespace MMO
             baseCol.Clear();
             usePrefab.Clear();
             anims.Clear();
+            hitPunch.Clear();     // Faz 5 his
+            baseScale.Clear();
             lastEnts = null;
             myId = 0;
             prevMyHp = -1;
@@ -33,9 +35,13 @@ namespace MMO
             playerAnim = null;
         }
 
-        void SpawnFloat(float x, float y, float z, string txt, Color c)
+        void SpawnFloat(float x, float y, float z, string txt, Color c, float size = 16f)
         {
-            floaters.Add(new FloatText { Pos = new Vector3(x, y, z), Text = txt, Col = c, Life = 1.1f });
+            floaters.Add(new FloatText
+            {
+                Pos = new Vector3(x, y, z), Text = txt, Col = c, Life = 1.1f,
+                Size = size, VX = Random.Range(-0.5f, 0.5f) // hafif yatay kayma (üst üste binmesin)
+            });
         }
 
         // Asset entegrasyonu: Resources/Entities/<key> prefab'ı varsa onu kullan, yoksa primitive (fallback).
@@ -134,6 +140,7 @@ namespace MMO
                     {
                         respawnMsg = "Yeniden doğdun.";
                         respawnMsgTimer = 2.5f;
+                        TriggerRespawnFx(); // Faz 5 his: diriliş flaşı
                     }
                     prevMyHp = e.Hp;
                     myHp = e.Hp;
@@ -233,8 +240,18 @@ namespace MMO
                     if (prevHp.TryGetValue(e.Id, out ph) && e.Hp != ph)
                     {
                         int delta = e.Hp - ph;
-                        if (delta < 0) { SpawnFloat(e.X, yOff + 1.4f, e.Y, "-" + (-delta), new Color(1f, 0.55f, 0.15f)); hitFlash[e.Id] = Time.time + 0.18f; PlayRandomSfx(hitClips, 0.5f); }
-                        else if (e.Id == myId) SpawnFloat(e.X, yOff + 1.4f, e.Y, "+" + delta, new Color(0.4f, 1f, 0.4f));
+                        if (delta < 0)
+                        {
+                            int dmg = -delta;
+                            bool big = dmg >= 25; // büyük vuruş: daha iri + altın + "!"
+                            float fsize = 16f + Mathf.Clamp(dmg * 0.5f, 0f, 24f);
+                            Color dcol = big ? new Color(1f, 0.82f, 0.25f) : new Color(1f, 0.55f, 0.15f);
+                            SpawnFloat(e.X, yOff + 1.4f, e.Y, "-" + dmg + (big ? "!" : ""), dcol, fsize);
+                            hitFlash[e.Id] = Time.time + 0.18f;
+                            PlayRandomSfx(hitClips, 0.5f);
+                            HitJuice(e.Id, dmg, e.Id == myId, e.Id == attackTarget); // Faz 5 his: tokat + sarsıntı + hit-stop
+                        }
+                        else if (e.Id == myId) SpawnFloat(e.X, yOff + 1.4f, e.Y, "+" + delta, new Color(0.4f, 1f, 0.4f), 16f);
                     }
                     prevHp[e.Id] = e.Hp;
                 }
@@ -263,11 +280,14 @@ namespace MMO
                     else if (hitFlash.Remove(e.Id))
                         SetColor(go, Color.white); // flaş bitti -> varsayılan görünüm
                 }
+
+                // Faz 5 his: tokat-ölçeği için taban ölçeği sakla (tokat yokken; prefab'te bake-in olmasın)
+                if (!hitPunch.ContainsKey(e.Id)) baseScale[e.Id] = go.transform.localScale;
             }
 
             var remove = new List<ulong>();
             foreach (var kv in cubes) if (!seen.Contains(kv.Key)) remove.Add(kv.Key);
-            foreach (var id in remove) { Destroy(cubes[id]); cubes.Remove(id); prevHp.Remove(id); baseCol.Remove(id); hitFlash.Remove(id); targetPos.Remove(id); usePrefab.Remove(id); anims.Remove(id); }
+            foreach (var id in remove) { Destroy(cubes[id]); cubes.Remove(id); prevHp.Remove(id); baseCol.Remove(id); hitFlash.Remove(id); targetPos.Remove(id); usePrefab.Remove(id); anims.Remove(id); hitPunch.Remove(id); baseScale.Remove(id); }
         }
 
         static void SetColor(GameObject go, Color c)

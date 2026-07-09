@@ -40,7 +40,7 @@ namespace MMO
                 }
                 else if (Protocol.TryDecodeStats(msg, out var lvl, out var xp, out var xpNext, out var maxHp, out var dmg))
                 {
-                    if (lvl > myLevel) { Debug.Log($"[NetClient] SEVİYE ATLADIN -> {lvl}!"); PlaySfx(levelUpClip); }
+                    if (lvl > myLevel) { Debug.Log($"[NetClient] SEVİYE ATLADIN -> {lvl}!"); PlaySfx(levelUpClip); TriggerLevelUpFx(); }
                     myLevel = lvl; myXp = xp; myXpNext = xpNext; myMaxHp = maxHp; myDamage = dmg;
                 }
                 else if (Protocol.TryDecodeEquipment(msg, out var wdef, out var adef))
@@ -61,7 +61,7 @@ namespace MMO
                 }
                 else if (Protocol.TryDecodeZone(msg, out var zid, out var zname))
                 {
-                    if (zid != zoneId) { zonePopupTimer = 2.5f; Debug.Log($"[NetClient] Bölge: {zname}"); }
+                    if (zid != zoneId) { zonePopupTimer = 2.5f; TriggerZoneFx(); Debug.Log($"[NetClient] Bölge: {zname}"); }
                     zoneId = zid; zoneName = zname;
                     UpdateDungeonEnv(); // zindan görsel ortamı (varsa) yükle/kaldır
                 }
@@ -76,6 +76,7 @@ namespace MMO
                     deathMsgTimer = 4f;
                     corpseTarget = 0; corpseRequested = false;
                     PlaySfx(deathClip);
+                    TriggerDeathFx(); // Faz 5 his: ölüm kırmızı flaş + güçlü sarsıntı
                     Debug.Log("[NetClient] " + deathMsg);
                 }
                 else if (Protocol.TryDecodePartyState(msg, out var pm))
