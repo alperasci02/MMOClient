@@ -1,9 +1,10 @@
 // NetClient.cs — sunucuya bağlan, hareket et, dövüş, loot, kalıcılık.
-// Kontroller (PC):
-//   Sol tık boş yere -> oraya yürü
-//   Sol tık mob'a    -> yanına yürü ve menzile girince otomatik saldır
-//   WASD             -> elle hareket
-//   SPACE            -> en yakın mob'a saldır
+// Kontroller (PC) — SADECE oynanış tuşları; menüler fareyle alt araç çubuğundan açılır:
+//   Sol tık boş yere -> oraya yürü            WASD  -> elle hareket
+//   Sol tık mob'a    -> yaklaş + otomatik saldır   SPACE -> en yakın mob'a saldır
+//   1/2/3            -> yetenekler (bara tıklayarak da) ESC -> menü/duraklat, Enter -> sohbet
+// Menüler (Çanta/Karakter/Üretim/Pazar/Lonca/Meslek/Görev/Sıralama/Parti/Sohbet/Tamir):
+//   ekranın altındaki araç çubuğundan tıklanarak — tuş ezberi yok (Faz 5, bkz. NetClient.UISkin.cs).
 // Görsel: oyuncular kapsül (yeşil=sen, kırmızı=diğerleri), mob'lar mor küp (vurdukça küçülür).
 using System;
 using System.Collections.Generic;
@@ -343,33 +344,13 @@ namespace MMO
                 return;
             }
 
-            if (kb != null && kb.iKey.wasPressedThisFrame) showInventory = !showInventory;
-            if (kb != null && kb.cKey.wasPressedThisFrame) showCrafting = !showCrafting;
-            if (kb != null && kb.kKey.wasPressedThisFrame) showCharSheet = !showCharSheet; // Faz A: karakter sayfası
-            if (kb != null && kb.mKey.wasPressedThisFrame) { showMarket = !showMarket; if (showMarket) net.Outbound.Enqueue(Protocol.EncodeMarketBrowse()); }
-            if (kb != null && kb.gKey.wasPressedThisFrame) { showGuild = !showGuild; if (showGuild) net.Outbound.Enqueue(Protocol.EncodeGuildInfoReq()); }
-            if (kb != null && kb.jKey.wasPressedThisFrame) showProf = !showProf;
-            if (kb != null && kb.tKey.wasPressedThisFrame) { showLeader = !showLeader; if (showLeader) net.Outbound.Enqueue(Protocol.EncodeLeaderReq()); }
-            if (kb != null && kb.qKey.wasPressedThisFrame) { showQuests = !showQuests; if (showQuests) net.Outbound.Enqueue(Protocol.EncodeQuestList()); }
-            if (kb != null && kb.rKey.wasPressedThisFrame)
-            {
-                if (zoneId == "meadow") { net.Outbound.Enqueue(Protocol.EncodeRepair()); repairMsg = "Tamir ediliyor..."; }
-                else repairMsg = "Tamir sadece güvenli bölgede (Başlangıç Çayırı)";
-                repairMsgTimer = 2.5f;
-            }
-            // Faz 15: parti — P davet, Y kabul, L ayrıl
-            if (kb != null && kb.pKey.wasPressedThisFrame) InviteNearest();
-            if (kb != null && kb.yKey.wasPressedThisFrame && pendingInviteTimer > 0f)
-            {
-                net.Outbound.Enqueue(Protocol.EncodePartyAccept());
-                pendingInviteTimer = 0f; pendingInviteFrom = "";
-                partyMsg = "Partiye katıldın"; partyMsgTimer = 2.5f;
-            }
-            if (kb != null && kb.lKey.wasPressedThisFrame && partyMembers.Count > 0)
-            {
-                net.Outbound.Enqueue(Protocol.EncodePartyLeave());
-                partyMsg = "Partiden ayrıldın"; partyMsgTimer = 2.5f;
-            }
+            // Faz 5 (Sunum): menüler artık TUŞLA açılmıyor — hepsi alt araç çubuğundan
+            // (DrawToolbar, bkz. NetClient.UISkin.cs) ve panel-içi butonlardan fareyle
+            // açılır/işletilir: Çanta / Karakter / Üretim / Pazar / Lonca / Meslek / Görev /
+            // Sıralama / Parti (davet) / Sohbet / Tamir / Menü. Parti kabul/reddet ve ayrıl
+            // da panel butonlarında. ESC hâlâ açık paneli kapatır / duraklatır, Enter hâlâ
+            // sohbet açar (evrensel kısayollar). Oynanış tuşları (WASD/SPACE/1-2-3/fare)
+            // menü değildir — aynen korundu.
 
             // 2) sol tık -> yürü / mob'a yürü+saldır
             if (mouse != null && mouse.leftButton.wasPressedThisFrame)
@@ -486,6 +467,7 @@ namespace MMO
 
         void HandleClick(Vector2 screenPos)
         {
+            if (PointerOverUI(screenPos)) return; // UI (araç çubuğu/panel/yetenek) üstüne tıklama dünyaya gitmesin
             var cam = Camera.main;
             if (cam == null) return;
             if (!Physics.Raycast(cam.ScreenPointToRay(screenPos), out var hit, 1000f)) return;
