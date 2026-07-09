@@ -57,7 +57,10 @@ namespace MMO
         void ScreenFlash(Color c, float dur, float alpha) { flashColor = new Color(c.r, c.g, c.b, alpha); flashTimer = dur; flashDur = dur; }
 
         float levelUpFxTimer = 0f;
-        GUIStyle floaterStyle, levelUpStyle;
+        GUIStyle floaterStyle, levelUpStyle, deathVeilStyle;
+
+        // --- ölüm perdesi: ölünce koyu-kırmızıya solar + tutar, dirilince içeri solar ---
+        float deathVeil = 0f;
 
         // --- darbe kıvılcımı: vuruş noktasında kısa, genişleyip sönen flaş (asset yok) ---
         struct Spark { public Vector3 Pos; public float Life; public Color Col; }
@@ -90,6 +93,8 @@ namespace MMO
         {
             if (flashTimer > 0f) flashTimer -= dt;
             if (levelUpFxTimer > 0f) levelUpFxTimer -= dt;
+            // ölüm perdesi: ölünce ~0.8s'de dolar, dirilince ~0.5s'de boşalır
+            deathVeil = Mathf.MoveTowards(deathVeil, myHp <= 0 ? 1f : 0f, dt / (myHp <= 0 ? 0.8f : 0.5f));
             if (hitPunch.Count > 0)
             {
                 _punchKeys.Clear(); _punchKeys.AddRange(hitPunch.Keys);
@@ -109,6 +114,25 @@ namespace MMO
             {
                 var s = sparks[i]; s.Life -= dt; sparks[i] = s;
                 if (s.Life <= 0f) sparks.RemoveAt(i);
+            }
+        }
+
+        // OnGUI: ölüm perdesi (koyu-kırmızı örtü + kalıcı ölüm mesajı). Dünya üstünde, panellerin altında.
+        void DrawDeathVeil()
+        {
+            if (deathVeil <= 0.001f) return;
+            var prev = GUI.color;
+            GUI.color = new Color(0.14f, 0f, 0f, deathVeil * 0.72f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = prev;
+            if (deathVeil > 0.5f && myHp <= 0)
+            {
+                if (deathVeilStyle == null)
+                    deathVeilStyle = new GUIStyle(GUI.skin.label) { fontSize = 32, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                float a = (deathVeil - 0.5f) * 2f;
+                deathVeilStyle.normal.textColor = new Color(1f, 0.32f, 0.3f, a);
+                GUI.Label(new Rect(0, Screen.height * 0.40f, Screen.width, 44),
+                    string.IsNullOrEmpty(deathMsg) ? "ÖLDÜN" : deathMsg, deathVeilStyle);
             }
         }
 

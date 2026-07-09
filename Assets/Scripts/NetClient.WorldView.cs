@@ -28,6 +28,7 @@ namespace MMO
             hitPunch.Clear();     // Faz 5 his
             baseScale.Clear();
             sparks.Clear();
+            deathVeil = 0f;
             lastEnts = null;
             myId = 0;
             prevMyHp = -1;

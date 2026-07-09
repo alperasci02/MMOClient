@@ -103,6 +103,7 @@ namespace MMO
             }
 
             DrawScreenFlash(); // Faz 5 his: seviye/ölüm/diriliş/bölge flaşları (dünya üstü, panel altı)
+            DrawDeathVeil();   // Faz 5 his: ölüm perdesi (ölünce solar+tutar, dirilince açılır)
 
             // --- sol-üst durum bloğu: hafif parşömen zeminli okunaklı künye ---
             var statBg = new Rect(10, 8, 360, 150);
@@ -131,13 +132,9 @@ namespace MMO
                 GUI.Label(new Rect(0, Screen.height * 0.32f, Screen.width, 50), zoneName, zp);
             }
 
-            if (deathMsgTimer > 0f)
-            {
-                var dp = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                dp.normal.textColor = new Color(1f, 0.25f, 0.25f, Mathf.Clamp01(deathMsgTimer));
-                GUI.Label(new Rect(0, Screen.height * 0.42f, Screen.width, 50), deathMsg, dp);
-            }
-            else if (respawnMsgTimer > 0f)
+            // Ölüm mesajı artık ölüm perdesi (DrawDeathVeil) tarafından kalıcı gösterilir.
+            // Burada yalnızca diriliş mesajı kalır (perde açılırken).
+            if (respawnMsgTimer > 0f)
             {
                 var rsp = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
                 rsp.normal.textColor = new Color(0.4f, 1f, 0.5f, Mathf.Clamp01(respawnMsgTimer));
