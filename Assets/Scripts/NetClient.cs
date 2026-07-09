@@ -384,6 +384,10 @@ namespace MMO
                 if (kb.digit1Key.wasPressedThisFrame) UseAbility(0);
                 if (kb.digit2Key.wasPressedThisFrame) UseAbility(1);
                 if (kb.digit3Key.wasPressedThisFrame) UseAbility(2);
+                // Faz 4: yetenek dalgası 2 orta-oyunda 5-6 yeteneğe çıkarır (bar zaten tıklanabilir)
+                if (kb.digit4Key.wasPressedThisFrame) UseAbility(3);
+                if (kb.digit5Key.wasPressedThisFrame) UseAbility(4);
+                if (kb.digit6Key.wasPressedThisFrame) UseAbility(5);
             }
 
             // 4) hareket yönünü belirle: WASD öncelikli, yoksa tıkla-yürü hedefi
