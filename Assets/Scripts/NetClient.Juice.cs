@@ -11,16 +11,34 @@ namespace MMO
 {
     public partial class NetClient
     {
-        // --- kamera sarsıntısı ---
-        float shakeAmt = 0f;
-        void AddShake(float amt) { shakeAmt = Mathf.Min(1.1f, Mathf.Max(shakeAmt, amt)); }
-        // CameraRig.LateUpdate her karede bir kez çağırır: mevcut kare ofsetini döndürür + söndürür.
-        Vector3 CameraShakeOffset()
+        // --- kamera sarsıntısı: trauma-tabanlı, Perlin-yumuşak, DÖNME ağırlıklı ---
+        // Ham Random titremesi yerine: "trauma" [0..1] birikir, sönümlenir; sarsıntı = trauma²
+        // (küçük olaylar neredeyse hiç, büyük olaylar sert — sabit titreme yok). Perlin gürültüsü
+        // sürekli/organik bir salınım verir; ağırlık POZİSYON değil DÖNME'de olduğu için tepeden
+        // kamerada "kayma" değil gerçek "sarsılma" hissi olur. Inspector'dan shakeStrength ile
+        // canlı ayarlanır (0 = kapalı).
+        [Range(0f, 1.5f)] public float shakeStrength = 1f;
+        float trauma = 0f;
+        float _seedX, _seedY, _seedZ; bool _seedInit;
+        void AddShake(float amt) { trauma = Mathf.Clamp01(trauma + amt); }
+
+        // CameraRig.LateUpdate her karede bir kez çağırır (taban konum/dönme ayarlandıktan sonra).
+        void ApplyCameraShake(Camera cam, Quaternion baseRot)
         {
-            if (shakeAmt <= 0.0008f) { shakeAmt = 0f; return Vector3.zero; }
-            var off = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f) * 0.5f, Random.Range(-1f, 1f)) * shakeAmt;
-            shakeAmt *= Mathf.Exp(-9f * Time.deltaTime);
-            return off;
+            if (trauma > 0f) trauma = Mathf.Max(0f, trauma - 1.4f * Time.deltaTime); // lineer sön
+            float shake = trauma * trauma * Mathf.Max(0f, shakeStrength); // karesel yanıt
+            if (shake <= 0.0001f) { cam.transform.rotation = baseRot; return; }
+
+            if (!_seedInit) { _seedX = Random.value * 1000f; _seedY = Random.value * 1000f; _seedZ = Random.value * 1000f; _seedInit = true; }
+            float t = Time.time * 26f; // Perlin frekansı (yumuşak ama canlı)
+            float nx = Mathf.PerlinNoise(_seedX, t) * 2f - 1f;
+            float ny = Mathf.PerlinNoise(_seedY, t) * 2f - 1f;
+            float nz = Mathf.PerlinNoise(_seedZ, t) * 2f - 1f;
+
+            const float maxAngle = 4f;  // derece — asıl his burada (dönme jolt'u)
+            const float maxPos = 0.5f;  // küçük konum tekmesi (dönmeyi tamamlar)
+            cam.transform.rotation = baseRot * Quaternion.Euler(ny * maxAngle * shake, nx * maxAngle * shake, nz * maxAngle * shake);
+            cam.transform.position += new Vector3(nx, nz * 0.4f, ny) * (maxPos * shake);
         }
 
         // --- hit-stop: kısa GÖRSEL donma (yalnızca varlık interpolasyonunu durdurur; sends akar) ---
@@ -42,18 +60,18 @@ namespace MMO
         GUIStyle floaterStyle, levelUpStyle;
 
         // Olay tetikleyicileri (ProtocolDispatch/ApplySnapshot'tan çağrılır)
-        void TriggerLevelUpFx() { levelUpFxTimer = 1.4f; ScreenFlash(new Color(1f, 0.82f, 0.3f), 0.5f, 0.34f); AddShake(0.4f); }
-        void TriggerDeathFx() { ScreenFlash(new Color(0.82f, 0.05f, 0.05f), 0.6f, 0.6f); AddShake(0.85f); }
-        void TriggerRespawnFx() { ScreenFlash(Color.white, 0.35f, 0.5f); AddShake(0.2f); }
-        void TriggerZoneFx() { ScreenFlash(new Color(0.5f, 0.8f, 1f), 0.35f, 0.26f); AddShake(0.15f); }
+        void TriggerLevelUpFx() { levelUpFxTimer = 1.4f; ScreenFlash(new Color(1f, 0.82f, 0.3f), 0.5f, 0.34f); AddShake(0.5f); }
+        void TriggerDeathFx() { ScreenFlash(new Color(0.82f, 0.05f, 0.05f), 0.6f, 0.6f); AddShake(0.75f); }
+        void TriggerRespawnFx() { ScreenFlash(Color.white, 0.35f, 0.5f); AddShake(0.3f); }
+        void TriggerZoneFx() { ScreenFlash(new Color(0.5f, 0.8f, 1f), 0.35f, 0.26f); AddShake(0.2f); }
 
-        // Vuruş anı: ölçek-tokatı + (kendine/hedefe) sarsıntı + kısa hit-stop.
+        // Vuruş anı: ölçek-tokatı + kısa hit-stop. SARSINTI yalnızca HASAR ALINCA (isabet atarken
+        // değil) — sürekli dövüşte kamera titremesin diye. İsabetin hissi tokat + hit-stop + sayıda.
         void HitJuice(ulong id, int dmg, bool onSelf, bool isMyTarget)
         {
             hitPunch[id] = PunchDur;
-            if (onSelf) { AddShake(0.30f + Mathf.Clamp01(dmg / 40f) * 0.35f); hitStopUntil = Time.time + 0.05f; }
-            else if (isMyTarget) { AddShake(0.12f); hitStopUntil = Time.time + 0.045f; }
-            else AddShake(0.05f);
+            if (onSelf) { AddShake(0.28f + Mathf.Clamp01(dmg / 40f) * 0.32f); hitStopUntil = Time.time + 0.05f; }
+            else if (isMyTarget) hitStopUntil = Time.time + 0.045f; // isabet: hit-stop + tokat var, sarsıntı yok
         }
 
         // Update() her karede: flaş/level-fx/tokat zamanlayıcılarını söndür.
