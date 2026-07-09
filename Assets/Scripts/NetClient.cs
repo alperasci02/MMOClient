@@ -233,6 +233,13 @@ namespace MMO
             if (clips != null && clips.Length > 0) PlaySfx(clips[UnityEngine.Random.Range(0, clips.Length)], vol);
         }
 
+        // Faz 5 ses: bir aksiyon paketini yollarken hafif UI tık sesi çal (buton geri bildirimi).
+        void Enq(byte[] packet)
+        {
+            PlaySfx(uiClickClip, 0.55f);
+            net.Outbound.Enqueue(packet);
+        }
+
         void Start()
         {
             SetupScene();
@@ -546,6 +553,7 @@ namespace MMO
                 if (target == 0) { noticeMsg = "Hedef yok"; noticeTimer = 1.5f; return; }
             }
             net.Outbound.Enqueue(Protocol.EncodeAbility((byte)idx, target));
+            PlayRandomSfx(hitClips, 0.4f); // Faz 5 ses: yetenek atış geri bildirimi (isabet sesi çarpışmada ayrıca gelir)
             if (playerAnim != null)
             {
                 // yeteneğe özel animasyon: heal=Buff (savaş narası), 1.yetenek=Attack2 (combo), 2.=Attack3 (360 dönüş)

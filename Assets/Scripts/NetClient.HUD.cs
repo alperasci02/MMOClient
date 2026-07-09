@@ -244,11 +244,11 @@ namespace MMO
                     float ry = py + 68 + i * 26;
                     string label = (equipped ? "★ " : "") + it.Name + "   x" + it.Qty;
                     if (GUI.Button(new Rect(px + 10, ry, w - 92, 24), label, uiItemBtn))
-                        net.Outbound.Enqueue(Protocol.EncodeEquip(it.DefID));
+                        Enq(Protocol.EncodeEquip(it.DefID));
                     if (GUI.Button(new Rect(px + w - 78, ry, 68, 24), "Sat", uiBtn))
                     {
                         long pr; long.TryParse(sellPriceStr, out pr);
-                        if (pr > 0) net.Outbound.Enqueue(Protocol.EncodeMarketList(it.DefID, 1, pr));
+                        if (pr > 0) Enq(Protocol.EncodeMarketList(it.DefID, 1, pr));
                     }
                 }
             }
@@ -270,7 +270,7 @@ namespace MMO
                     uiItemBtn.normal.textColor = RarityColor(rc.OutRarity);
                     uiItemBtn.hover.textColor = RarityColor(rc.OutRarity);
                     if (GUI.Button(new Rect(cx + 10, cy + 38 + i * 26, cw - 20, 24), rc.OutName + "  ←  " + inp, uiItemBtn))
-                        net.Outbound.Enqueue(Protocol.EncodeCraft(rc.Id));
+                        Enq(Protocol.EncodeCraft(rc.Id));
                 }
             }
 
@@ -293,7 +293,7 @@ namespace MMO
                     uiItemBtn.hover.textColor = RarityColor(e.Rarity);
                     string label = e.Name + " x" + e.Qty + "   —   " + e.Price + " altın   (" + e.Seller + ")";
                     if (GUI.Button(new Rect(mx + 10, my + 38 + i * 24, mw - 20, 22), label, uiItemBtn))
-                        net.Outbound.Enqueue(Protocol.EncodeMarketBuy(e.Id));
+                        Enq(Protocol.EncodeMarketBuy(e.Id));
                 }
             }
 
@@ -407,8 +407,8 @@ namespace MMO
                     string suffix = q.State == 1 ? ("  " + q.Progress + "/" + q.Count) : "";
                     var ql = q.State == 3 ? uiLapis : (q.State == 2 ? uiGold : uiBody);
                     GUI.Label(new Rect(qx + 14, ry, qw - 130, 28), q.Name + suffix, ql);
-                    if (q.State == 0) { if (GUI.Button(new Rect(qx + qw - 112, ry, 100, 24), "Kabul Et", uiBtnGold)) net.Outbound.Enqueue(Protocol.EncodeQuestAccept(q.Id)); }
-                    else if (q.State == 2) { if (GUI.Button(new Rect(qx + qw - 112, ry, 100, 24), "Ödül Al", uiBtnGold)) net.Outbound.Enqueue(Protocol.EncodeQuestClaim(q.Id)); }
+                    if (q.State == 0) { if (GUI.Button(new Rect(qx + qw - 112, ry, 100, 24), "Kabul Et", uiBtnGold)) Enq(Protocol.EncodeQuestAccept(q.Id)); }
+                    else if (q.State == 2) { if (GUI.Button(new Rect(qx + qw - 112, ry, 100, 24), "Ödül Al", uiBtnGold)) Enq(Protocol.EncodeQuestClaim(q.Id)); }
                     else if (q.State == 3) { GUI.Label(new Rect(qx + qw - 112, ry, 100, 24), "✓ Tamam", uiLapis); }
                 }
             }
