@@ -245,7 +245,8 @@ namespace MMO
             SetupScene();
             LoadAudio();
             LoadSettings(); // Faz 5: kalıcı ayarlar (sarsıntı gücü, ses) — bkz. NetClient.Settings.cs
-            nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
+            // Faz 5: son kullanılan karakter ismini hatırla (sunucu adresi gibi)
+            nameInput = PlayerPrefs.GetString(NamePrefKey, string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName);
             // Faz 2 gün 6: son kullanılan sunucu adresini hatırla (LAN'da arkadaşının IP'sini
             // her seferinde yeniden yazmasın). Inspector'daki `url` ilk-kurulum varsayılanı.
             serverAddressInput = PlayerPrefs.GetString(ServerAddressPrefKey, url);
@@ -254,6 +255,7 @@ namespace MMO
 
         // İsim ekranından çağrılır: kalıcılık-modu kontrolünü ve bağlantı döngüsünü başlatır.
         const string ServerAddressPrefKey = "mmo_server_url";
+        const string NamePrefKey = "mmo_player_name";
         void StartConnecting()
         {
             nameScreenActive = false;
@@ -263,6 +265,8 @@ namespace MMO
             string addr = serverAddressInput == null ? "" : serverAddressInput.Trim();
             url = addr.Length == 0 ? url : addr; // boşsa Inspector varsayılanında kal
             PlayerPrefs.SetString(ServerAddressPrefKey, url);
+            PlayerPrefs.SetString(NamePrefKey, playerName); // Faz 5: ismi hatırla
+            PlayerPrefs.Save();
 
             net = new NetConnection(this, url, maxConnectRetries, maxRetryDelaySec);
             net.Begin(playerName);

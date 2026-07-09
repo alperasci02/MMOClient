@@ -10,6 +10,8 @@ namespace MMO
     public partial class NetClient
     {
         bool showSettings = false;
+        bool showCredits = false;
+        bool _nameFocused = false; // isim ekranında bir kez odak (her kare zorlama = sunucu alanı düzenlenemez hatası)
         float masterVolume = 0.8f; // AudioListener.volume'a uygulanır (0 = sessiz)
 
         const string PrefShake = "mmo_shake";
@@ -59,6 +61,26 @@ namespace MMO
             if (GUI.Button(new Rect(x + 34 + bw, y + h - 44, bw, 30), "Kapat", uiBtnGold))
             {
                 PlaySfx(uiClickClip); showSettings = false; SaveSettings();
+            }
+        }
+
+        // Faz 5: krediler (ana menüden). Ses paketi CC0 atıfları + oyun kimliği.
+        void DrawCredits()
+        {
+            float w = 440, h = 250, x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
+            var r = new Rect(x, y, w, h); RegisterUI(r);
+            if (UIPanel(r, "Krediler")) showCredits = false;
+
+            GUI.Label(new Rect(x + 20, y + 44, w - 40, 22), "ANATOLIA — Katmanlı Dünya", uiGold);
+            GUI.Label(new Rect(x + 20, y + 70, w - 40, 40),
+                "Solo + LAN co-op Aksiyon RPG.\nTasarım incili: Docs/DESIGN_BIBLE.", uiBody);
+            GUI.Label(new Rect(x + 20, y + 120, w - 40, 22), "— Ses —", uiTitle);
+            GUI.Label(new Rect(x + 20, y + 146, w - 40, 44),
+                "Kenney.nl (CC0): RPG Audio · Impact Sounds ·\nMusic Jingles · UI Audio.  Teşekkürler!", uiSmall);
+
+            if (GUI.Button(new Rect(x + w / 2f - 60, y + h - 44, 120, 30), "Kapat", uiBtnGold))
+            {
+                PlaySfx(uiClickClip); showCredits = false;
             }
         }
     }

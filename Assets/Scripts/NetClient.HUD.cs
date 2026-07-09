@@ -510,44 +510,74 @@ namespace MMO
             if (showSettings) DrawSettings(); // Faz 5: ayarlar (duraklat menüsünden), en üstte
         }
 
-        // Faz 1 (Foundation): ilk-oynanış isim ekranı — bağlantı Inspector'dan değil buradan başlar.
+        // Faz 1 (Foundation) / Faz 5 (Sunum): ana menü + karaktere giriş. Bağlantı buradan başlar.
+        void DrawTitleBanner(float centerY)
+        {
+            var titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 56, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            titleStyle.normal.textColor = colGoldTx;
+            var subStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleCenter };
+            subStyle.normal.textColor = colLapis;
+            GUI.Label(new Rect(0, centerY - 46, Screen.width, 64), "ANATOLIA", titleStyle);
+            GUI.Label(new Rect(0, centerY + 16, Screen.width, 24), "◆  Katmanlı Dünya  ◆", subStyle);
+        }
+
         void DrawNameScreen()
         {
-            float w = 480, h = 300;
-            float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
+            float w = 480, h = 350;
+            float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f + 44f;
+
+            DrawTitleBanner(y - 96); // başlık afişi (panelin üstünde)
+
             var r = new Rect(x, y, w, h);
-            if (UIPanel(r, "PROJECT ANATOLIA")) { }
+            if (UIPanel(r, "Karaktere Gir")) { }
 
-            GUI.Label(new Rect(x + 24, y + 52, 90, 28), "İsim:", uiBody);
+            GUI.Label(new Rect(x + 24, y + 46, 90, 28), "İsim:", uiBody);
             GUI.SetNextControlName("nameField");
-            nameInput = GUI.TextField(new Rect(x + 110, y + 50, w - 150, 30), nameInput, 24, uiField);
-            GUI.FocusControl("nameField");
-
-            GUI.Label(new Rect(x + 24, y + 86, w - 48, 20), "Aynı isimle girersen karakterin/altının kalıcı kalır.", uiSmall);
+            nameInput = GUI.TextField(new Rect(x + 110, y + 44, w - 150, 30), nameInput, 24, uiField);
+            GUI.Label(new Rect(x + 24, y + 80, w - 48, 20), "Aynı isimle girersen karakterin/altının kalıcı kalır.", uiSmall);
 
             // Faz 2 gün 6: LAN sunucu adresi — Host: localhost, Join: arkadaşının LAN IP'si.
-            GUI.Label(new Rect(x + 24, y + 118, 90, 28), "Sunucu:", uiBody);
+            GUI.Label(new Rect(x + 24, y + 110, 90, 28), "Sunucu:", uiBody);
             GUI.SetNextControlName("serverField");
-            serverAddressInput = GUI.TextField(new Rect(x + 110, y + 116, w - 150, 30), serverAddressInput, 64, uiField);
-
-            GUI.Label(new Rect(x + 24, y + 152, w - 48, 40),
-                "Kendi bilgisayarında (Host): ws://localhost:8080/ws\nArkadaşına bağlanıyorsan (Join): ws://<onun-IP'si>:8080/ws",
+            serverAddressInput = GUI.TextField(new Rect(x + 110, y + 108, w - 150, 30), serverAddressInput, 64, uiField);
+            GUI.Label(new Rect(x + 24, y + 144, w - 48, 40),
+                "Kendi bilgisayarında (Host): ws://localhost:8080/ws\nArkadaşına (Join): ws://<onun-IP'si>:8080/ws",
                 uiSmall);
 
             bool enterPressed = Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame;
-            if (GUI.Button(new Rect(x + w / 2f - 80, y + h - 52, 160, 38), "Oyna", uiBtnGold) || enterPressed)
+            if (GUI.Button(new Rect(x + 24, y + h - 98, w - 48, 40), "Oyna", uiBtnGold) || (enterPressed && !showSettings && !showCredits))
             {
                 PlaySfx(uiClickClip);
                 StartConnecting();
             }
+            float bw = (w - 60) / 2f;
+            if (GUI.Button(new Rect(x + 24, y + h - 50, bw, 34), "Ayarlar", uiBtn)) { PlaySfx(uiClickClip); showSettings = true; }
+            if (GUI.Button(new Rect(x + 36 + bw, y + h - 50, bw, 34), "Çıkış", uiBtn))
+            {
+                PlaySfx(uiClickClip);
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+            }
+
+            if (GUI.Button(new Rect(Screen.width - 112, Screen.height - 34, 96, 24), "Krediler", uiBtn)) { PlaySfx(uiClickClip); showCredits = true; }
+
+            // isim alanına yalnızca BİR kez odaklan (her kare zorlamak sunucu alanını düzenlenemez yapardı)
+            if (!_nameFocused && !showSettings && !showCredits) { GUI.FocusControl("nameField"); _nameFocused = true; }
+
+            if (showSettings) DrawSettings();
+            if (showCredits) DrawCredits();
         }
 
         // Faz 1 (Foundation): "Oyna"dan sonra, WS bağlantısı kurulana kadar (retry dahil) gösterilir.
         void DrawConnectingScreen()
         {
+            DrawTitleBanner(Screen.height / 2f - 70f);
             var st = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             st.normal.textColor = colParch;
-            GUI.Label(new Rect(0, Screen.height / 2f - 20, Screen.width, 40),
+            GUI.Label(new Rect(0, Screen.height / 2f + 10f, Screen.width, 40),
                 string.IsNullOrEmpty(net.Status) ? "Bağlanılıyor..." : net.Status, st);
         }
 
