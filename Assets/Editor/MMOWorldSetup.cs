@@ -38,6 +38,8 @@ public static class MMOWorldSetup
         SetupSimpleProp(M + "Items", "Crystal1", "node_mithril", 1.5f);
         SetupNature();
         SetupCoast();
+        SetupMountains(); // yeni bölge dekoru (0027)
+        SetupMarsh();     // yeni bölge dekoru (0028)
         SetupMarket();
         SetupDungeons();
         SetupWeapons();
@@ -231,6 +233,42 @@ public static class MMOWorldSetup
             PlaceNPC(root, "Rogue", new Vector3(9f, 0, -3f), 250f, 1.9f);
             // Kamp ateşi
             Place(root, "Town", "Woodfire", new Vector3(-3f, 0, -7.5f), 0f, 0.8f);
+        });
+    }
+
+    // ---------- Dağ Yamaçları (mountains bölgesi): çam + BOL kaya/blok, madencilik hissi ----------
+    static void SetupMountains()
+    {
+        // Az ağaç (çam/kuru), çok kaya süsü; iri kaya bloklarıyla dağ silueti + kristal (maden)
+        BuildScatter("nature_mountains", 24680, new[] { "PineTree_", "DeadTree_" }, new[] { "Rock_", "Bush_Small" }, 14, 42, 15f, 42f, 5.0f, 1.6f, root =>
+        {
+            Place(root, "Nature", "Rock_4", new Vector3(11f, 0, 6f), 20f, 4.2f);
+            Place(root, "Nature", "Rock_5", new Vector3(-9f, 0, 9f), 200f, 4.6f);
+            Place(root, "Nature", "Rock_3", new Vector3(6f, 0, -12f), 90f, 3.6f);
+            Place(root, "Nature", "Rock_2", new Vector3(-13f, 0, -6f), 340f, 3.2f);
+            Place(root, "Nature", "Rock_4", new Vector3(14f, 0, -8f), 130f, 3.8f);
+            // Maden hissi: parlayan kristal öbekleri (kaynak düğümleri ayrı; bu dekor)
+            Place(root, "Items", "Crystal1", new Vector3(12f, 0, -3f), 0f, 1.6f);
+            Place(root, "Items", "Crystal1", new Vector3(-11f, 0, 3f), 40f, 1.3f);
+            // Terk edilmiş kazma/kamp (madenci hissi)
+            Place(root, "Town", "Woodfire", new Vector3(-3f, 0, 8f), 0f, 0.8f);
+            Place(root, "Town", "Crate", new Vector3(-1.5f, 0, 9.5f), 20f, 0.9f);
+        });
+    }
+
+    // ---------- Sisli Bataklık (marsh bölgesi): BOL ölü ağaç + bataklık bitkileri, çürük his ----------
+    static void SetupMarsh()
+    {
+        // Sadece ölü ağaçlar (bataklık) + bol bitki/çalı; kemik/kafatası ile tekinsiz his
+        BuildScatter("nature_marsh", 13579, new[] { "DeadTree_" }, new[] { "Plant_", "Bush_", "Flower_" }, 30, 34, 14f, 46f, 5.5f, 1.3f, root =>
+        {
+            Place(root, "Nature", "DeadTree_7", new Vector3(9f, 0, 7f), 40f, 4.2f);
+            Place(root, "Nature", "DeadTree_3", new Vector3(-8f, 0, -9f), 300f, 4.6f);
+            Place(root, "Nature", "Rock_1", new Vector3(-6f, 0, 10f), 0f, 1.6f);
+            // Bataklık kurbanları — tekinsizlik
+            Place(root, "DungeonDeco", "Bones", new Vector3(6f, 0, -8f), 120f, 0.6f);
+            Place(root, "Town", "Skull", new Vector3(-5f, 0, -6f), 60f, 0.5f);
+            Place(root, "Town", "Trap_spikes", new Vector3(4f, 0, 9f), 0f, 0.5f);
         });
     }
 

@@ -53,6 +53,20 @@ namespace MMO
                 RenderSettings.fogColor = new Color(0.35f, 0.48f, 0.60f);     // açık mavi pus
                 RenderSettings.fogStartDistance = 60f; RenderSettings.fogEndDistance = 160f;
             }
+            else if (zoneId == "mountains")
+            {
+                Add("nature_mountains");
+                RenderSettings.ambientLight = new Color(0.44f, 0.46f, 0.50f); // taşlı, soğuk-gri dağ havası
+                RenderSettings.fogColor = new Color(0.34f, 0.36f, 0.40f);
+                RenderSettings.fogStartDistance = 42f; RenderSettings.fogEndDistance = 135f;
+            }
+            else if (zoneId == "marsh")
+            {
+                Add("nature_marsh");
+                RenderSettings.ambientLight = new Color(0.30f, 0.35f, 0.29f); // sisli, çürük yeşil-gri
+                RenderSettings.fogColor = new Color(0.24f, 0.29f, 0.23f);
+                RenderSettings.fogStartDistance = 14f; RenderSettings.fogEndDistance = 62f; // yoğun sis (Sisli Bataklık)
+            }
             else // meadow (başlangıç): doğa + pazar meydanı
             {
                 Add("nature_meadow");
