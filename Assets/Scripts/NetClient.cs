@@ -237,6 +237,7 @@ namespace MMO
         {
             SetupScene();
             LoadAudio();
+            LoadSettings(); // Faz 5: kalıcı ayarlar (sarsıntı gücü, ses) — bkz. NetClient.Settings.cs
             nameInput = string.IsNullOrEmpty(playerName) ? "Kahraman" : playerName;
             // Faz 2 gün 6: son kullanılan sunucu adresini hatırla (LAN'da arkadaşının IP'sini
             // her seferinde yeniden yazmasın). Inspector'daki `url` ilk-kurulum varsayılanı.
@@ -322,7 +323,8 @@ namespace MMO
             var kbEsc = Keyboard.current;
             if (kbEsc != null && kbEsc.escapeKey.wasPressedThisFrame)
             {
-                if (showInventory || showCrafting || showCharSheet || showMarket || showGuild || showProf || showQuests || showLeader)
+                if (showSettings) { showSettings = false; SaveSettings(); }
+                else if (showInventory || showCrafting || showCharSheet || showMarket || showGuild || showProf || showQuests || showLeader)
                     showInventory = showCrafting = showCharSheet = showMarket = showGuild = showProf = showQuests = showLeader = false;
                 else
                     paused = !paused;

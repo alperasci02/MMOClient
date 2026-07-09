@@ -508,6 +508,7 @@ namespace MMO
             DrawToolbar();
 
             if (paused) DrawPauseMenu();
+            if (showSettings) DrawSettings(); // Faz 5: ayarlar (duraklat menüsünden), en üstte
         }
 
         // Faz 1 (Foundation): ilk-oynanış isim ekranı — bağlantı Inspector'dan değil buradan başlar.
@@ -559,7 +560,7 @@ namespace MMO
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = prev;
 
-            float w = 280, h = 150;
+            float w = 280, h = 200;
             float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f - h / 2f;
             var r = new Rect(x, y, w, h); RegisterUI(r);
             if (UIPanel(r, "Duraklatıldı")) paused = false;
@@ -569,7 +570,12 @@ namespace MMO
                 PlaySfx(uiClickClip);
                 paused = false;
             }
-            if (GUI.Button(new Rect(x + 30, y + 90, w - 60, 34), "Çıkış", uiBtn))
+            if (GUI.Button(new Rect(x + 30, y + 88, w - 60, 34), "Ayarlar", uiBtn))
+            {
+                PlaySfx(uiClickClip);
+                showSettings = true;
+            }
+            if (GUI.Button(new Rect(x + 30, y + 130, w - 60, 34), "Çıkış", uiBtn))
             {
                 PlaySfx(uiClickClip);
 #if UNITY_EDITOR
