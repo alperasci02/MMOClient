@@ -105,10 +105,13 @@ namespace MMO
             DrawScreenFlash(); // Faz 5 his: seviye/ölüm/diriliş/bölge flaşları (dünya üstü, panel altı)
             DrawDeathVeil();   // Faz 5 his: ölüm perdesi (ölünce solar+tutar, dirilince açılır)
 
-            // --- sol-üst durum bloğu: hafif parşömen zeminli okunaklı künye ---
-            var statBg = new Rect(10, 8, 360, 150);
-            var pv0 = GUI.color; GUI.color = new Color(colPanel.r, colPanel.g, colPanel.b, 0.55f);
-            GUI.DrawTexture(statBg, _txPanel); GUI.color = pv0;
+            // --- sol-üst durum bloğu: çerçeveli, opak panel (her biome'da okunaklı — geri bildirim #3) ---
+            var statBg = new Rect(10, 8, 360, 152);
+            var pv0 = GUI.color;
+            GUI.DrawTexture(new Rect(statBg.x - 2, statBg.y - 2, statBg.width + 4, statBg.height + 4), _txBorder); // altın çerçeve
+            GUI.color = new Color(colPanel.r, colPanel.g, colPanel.b, 0.9f);
+            GUI.DrawTexture(statBg, _txPanel);
+            GUI.color = pv0;
 
             var gold = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold };
             gold.normal.textColor = colGoldTx;
@@ -275,24 +278,39 @@ namespace MMO
 
             if (showMarket)
             {
-                float mw = 470;
-                int mn = Mathf.Max(market.Count, 1);
-                float mh = 44 + mn * 24;
-                float mx = Screen.width / 2f - mw / 2f, my = 60;
-                var r = new Rect(mx, my, mw, mh); RegisterUI(r);
-                if (UIPanel(r, "Pazar")) showMarket = false;
-
-                if (market.Count == 0)
-                    GUI.Label(new Rect(mx + 14, my + 40, mw - 24, 20), "(ilan yok — bir şey sat!)", uiSmall);
-
+                // Geri bildirim #1: aynı ürün/fiyat/satıcı ilanlarını grupla + fiyata göre sırala
+                var groups = new List<MarketGroup>();
                 for (int i = 0; i < market.Count; i++)
                 {
                     var e = market[i];
-                    uiItemBtn.normal.textColor = RarityColor(e.Rarity);
-                    uiItemBtn.hover.textColor = RarityColor(e.Rarity);
-                    string label = e.Name + " x" + e.Qty + "   —   " + e.Price + " altın   (" + e.Seller + ")";
+                    int gi = -1;
+                    for (int j = 0; j < groups.Count; j++)
+                        if (groups[j].Name == e.Name && groups[j].Price == e.Price && groups[j].Seller == e.Seller) { gi = j; break; }
+                    if (gi < 0)
+                        groups.Add(new MarketGroup { Name = e.Name, Seller = e.Seller, Price = e.Price, Rarity = e.Rarity, Count = 1, TotalQty = e.Qty, FirstId = e.Id });
+                    else { var g = groups[gi]; g.Count++; g.TotalQty += e.Qty; groups[gi] = g; }
+                }
+                groups.Sort((a, b) => a.Price != b.Price ? a.Price.CompareTo(b.Price) : string.Compare(a.Name, b.Name, System.StringComparison.Ordinal));
+
+                float mw = 490;
+                int mn = Mathf.Max(groups.Count, 1);
+                float mh = 44 + mn * 24;
+                float mx = Screen.width / 2f - mw / 2f, my = 60;
+                var r = new Rect(mx, my, mw, mh); RegisterUI(r);
+                if (UIPanel(r, "Pazar  (ucuzdan pahalıya)")) showMarket = false;
+
+                if (groups.Count == 0)
+                    GUI.Label(new Rect(mx + 14, my + 40, mw - 24, 20), "(ilan yok — bir şey sat!)", uiSmall);
+
+                for (int i = 0; i < groups.Count; i++)
+                {
+                    var g = groups[i];
+                    uiItemBtn.normal.textColor = RarityColor(g.Rarity);
+                    uiItemBtn.hover.textColor = RarityColor(g.Rarity);
+                    string tag = g.Count > 1 ? ("  ×" + g.Count + " ilan") : "";
+                    string label = g.Name + tag + "   —   " + g.Price + " altın   (" + g.Seller + ")";
                     if (GUI.Button(new Rect(mx + 10, my + 38 + i * 24, mw - 20, 22), label, uiItemBtn))
-                        Enq(Protocol.EncodeMarketBuy(e.Id));
+                        Enq(Protocol.EncodeMarketBuy(g.FirstId)); // gruptan en ucuz bir ilanı al
                 }
             }
 
@@ -470,7 +488,16 @@ namespace MMO
                     var rr = new Rect(x, by, bw, 44); RegisterUI(rr);
                     GUI.DrawTexture(new Rect(rr.x - 1, rr.y - 1, rr.width + 2, rr.height + 2), _txBorder);
                     GUI.DrawTexture(rr, ready ? _txAbil : _txAbilCd);
-                    string cd = ready ? "" : "  (" + Mathf.CeilToInt(abilityReadyAt[i] - Time.time) + "s)";
+                    // Geri bildirim #4: görsel cooldown — kalan süre kadar üstten koyu dolgu (aşağı boşalır)
+                    if (!ready)
+                    {
+                        float totalCd = Mathf.Max(0.1f, abilities[i].CooldownMs / 1000f);
+                        float frac = Mathf.Clamp01((abilityReadyAt[i] - Time.time) / totalCd);
+                        var pcv = GUI.color; GUI.color = new Color(0f, 0f, 0f, 0.5f);
+                        GUI.DrawTexture(new Rect(rr.x, rr.y, rr.width, rr.height * frac), Texture2D.whiteTexture);
+                        GUI.color = pcv;
+                    }
+                    string cd = ready ? "" : "  " + Mathf.CeilToInt(abilityReadyAt[i] - Time.time) + "s";
                     GUI.Label(rr, "[" + (i + 1) + "] " + abilities[i].Name + cd, ready ? uiAbilTxt : uiAbilCdTxt);
                     if (GUI.Button(rr, GUIContent.none, uiInvisible)) UseAbility(i);
                 }
@@ -755,6 +782,9 @@ namespace MMO
                 default: return cls;
             }
         }
+
+        // Geri bildirim #1: pazar satırlarını grupla (aynı ürün/fiyat/satıcı tek satır).
+        struct MarketGroup { public string Name; public string Seller; public long Price; public byte Rarity; public int Count; public int TotalQty; public long FirstId; }
 
         static Color RarityColor(byte r)
         {

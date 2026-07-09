@@ -167,9 +167,21 @@ namespace MMO
             }
         }
 
+        // Geri bildirim #2: tek-panel kuralı — 8 büyük panelden biri açılırken diğerleri kapanır.
+        void CloseAllPanels()
+        {
+            showInventory = showCharSheet = showCrafting = showMarket = showGuild = showProf = showQuests = showLeader = false;
+        }
+
         void ToolbarAction(int i)
         {
             PlaySfx(uiClickClip);
+            if (i <= 7) // büyük paneller: tek seferde tek panel
+            {
+                bool wasOpen = PanelActive(i);
+                CloseAllPanels();
+                if (wasOpen) return; // zaten açıktı -> kapat (yeniden açma)
+            }
             switch (i)
             {
                 case 0: showInventory = !showInventory; break;
