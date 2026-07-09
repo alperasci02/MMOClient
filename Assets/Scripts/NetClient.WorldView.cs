@@ -27,6 +27,7 @@ namespace MMO
             anims.Clear();
             hitPunch.Clear();     // Faz 5 his
             baseScale.Clear();
+            sparks.Clear();
             lastEnts = null;
             myId = 0;
             prevMyHp = -1;
@@ -247,6 +248,7 @@ namespace MMO
                             float fsize = 16f + Mathf.Clamp(dmg * 0.5f, 0f, 24f);
                             Color dcol = big ? new Color(1f, 0.82f, 0.25f) : new Color(1f, 0.55f, 0.15f);
                             SpawnFloat(e.X, yOff + 1.4f, e.Y, "-" + dmg + (big ? "!" : ""), dcol, fsize);
+                            SpawnSpark(e.X, yOff + 1f, e.Y, big ? new Color(1f, 0.9f, 0.5f) : new Color(1f, 0.85f, 0.7f)); // Faz 5 his: darbe kıvılcımı
                             hitFlash[e.Id] = Time.time + 0.18f;
                             PlayRandomSfx(hitClips, 0.5f);
                             HitJuice(e.Id, dmg, e.Id == myId, e.Id == attackTarget); // Faz 5 his: tokat + sarsıntı + hit-stop

@@ -55,11 +55,12 @@ namespace MMO
             }
 
             int lowHp = Mathf.RoundToInt(myMaxHp * 0.3f);
-            // az canlıyken kırmızı ekran uyarısı
+            // az canlıyken kırmızı ekran uyarısı — Faz 5 his: sabit ton yerine kalp-atışı nabzı
             if (myHp > 0 && myHp < lowHp)
             {
                 var prev = GUI.color;
-                GUI.color = new Color(1f, 0f, 0f, 0.18f);
+                float pulse = 0.10f + 0.10f * Mathf.Abs(Mathf.Sin(Time.time * 4f));
+                GUI.color = new Color(1f, 0f, 0f, pulse);
                 GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
                 GUI.color = prev;
             }
@@ -97,6 +98,7 @@ namespace MMO
                         }
                     }
                 }
+                DrawSparks(wcam);   // Faz 5 his: darbe kıvılcımı (sayıların altında)
                 DrawFloaters(wcam); // Faz 5 his: pop-ölçekli, konturlu, kayan hasar sayıları
             }
 

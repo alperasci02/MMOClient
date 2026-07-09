@@ -59,6 +59,12 @@ namespace MMO
         float levelUpFxTimer = 0f;
         GUIStyle floaterStyle, levelUpStyle;
 
+        // --- darbe kıvılcımı: vuruş noktasında kısa, genişleyip sönen flaş (asset yok) ---
+        struct Spark { public Vector3 Pos; public float Life; public Color Col; }
+        readonly List<Spark> sparks = new List<Spark>();
+        const float SparkLife = 0.18f;
+        void SpawnSpark(float x, float y, float z, Color c) { sparks.Add(new Spark { Pos = new Vector3(x, y, z), Life = SparkLife, Col = c }); }
+
         // Olay tetikleyicileri (ProtocolDispatch/ApplySnapshot'tan çağrılır)
         void TriggerLevelUpFx() { levelUpFxTimer = 1.4f; ScreenFlash(new Color(1f, 0.82f, 0.3f), 0.5f, 0.34f); AddShake(0.5f); }
         void TriggerDeathFx() { ScreenFlash(new Color(0.82f, 0.05f, 0.05f), 0.6f, 0.6f); AddShake(0.75f); }
@@ -70,7 +76,12 @@ namespace MMO
         void HitJuice(ulong id, int dmg, bool onSelf, bool isMyTarget)
         {
             hitPunch[id] = PunchDur;
-            if (onSelf) { AddShake(0.28f + Mathf.Clamp01(dmg / 40f) * 0.32f); hitStopUntil = Time.time + 0.05f; }
+            if (onSelf)
+            {
+                AddShake(0.28f + Mathf.Clamp01(dmg / 40f) * 0.32f);
+                hitStopUntil = Time.time + 0.05f;
+                ScreenFlash(new Color(0.85f, 0.12f, 0.12f), 0.22f, 0.16f); // hasar aldın: kısa kırmızı nabız
+            }
             else if (isMyTarget) hitStopUntil = Time.time + 0.045f; // isabet: hit-stop + tokat var, sarsıntı yok
         }
 
@@ -94,6 +105,28 @@ namespace MMO
                     else hitPunch[k] = v;
                 }
             }
+            for (int i = sparks.Count - 1; i >= 0; i--)
+            {
+                var s = sparks[i]; s.Life -= dt; sparks[i] = s;
+                if (s.Life <= 0f) sparks.RemoveAt(i);
+            }
+        }
+
+        // OnGUI: darbe kıvılcımları (genişleyen, sönen kare flaş — dünya üstünde, sayıların altında).
+        void DrawSparks(Camera wcam)
+        {
+            if (sparks.Count == 0) return;
+            var prev = GUI.color;
+            foreach (var s in sparks)
+            {
+                Vector3 sp = wcam.WorldToScreenPoint(s.Pos);
+                if (sp.z <= 0f) continue;
+                float t = Mathf.Clamp01((SparkLife - s.Life) / SparkLife);
+                float size = Mathf.Lerp(12f, 52f, t);
+                GUI.color = new Color(s.Col.r, s.Col.g, s.Col.b, (1f - t) * 0.6f);
+                GUI.DrawTexture(new Rect(sp.x - size / 2f, Screen.height - sp.y - size / 2f, size, size), Texture2D.whiteTexture);
+            }
+            GUI.color = prev;
         }
 
         // Update() cube döngüsünde çağrılır: tokat varsa taban ölçeğin üstüne pop uygula.
